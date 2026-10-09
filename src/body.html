@@ -1,0 +1,200 @@
+<div id="app">
+
+  <!-- STEP 1: スタート -->
+  <section class="screen" id="scr-start">
+    <header class="brand">GOLF GUTS <b>PUTT LAB</b></header>
+    <h1 class="h-big">まずはスマホで<br>グリーンの傾斜を<br>測定しましょう！</h1>
+    <p class="lead">スマホをグリーンに置くだけで、上り・下り・左右の傾斜をチェックできます。</p>
+    <div class="illust" id="start-illust" role="img" aria-label="グリーンの上に置いたスマホ。スマホの上側がカップを向いている"></div>
+    <ol class="steps">
+      <li><span class="n">1</span>スマホの画面を上に向ける</li>
+      <li><span class="n">2</span>スマホの上側をカップに向ける</li>
+      <li><span class="n">3</span>グリーンに置いて静止させる</li>
+    </ol>
+    <div class="cta">
+      <button class="btn-volt" id="btn-measure" type="button">傾斜を測定する <span class="arr" aria-hidden="true">→</span></button>
+      <button class="btn-text" id="btn-manual" type="button">センサーを使わず手動で入力する</button>
+    </div>
+  </section>
+
+  <!-- STEP 2: 測定中 -->
+  <section class="screen" id="scr-measure" hidden>
+    <header class="brand">GOLF GUTS <b>PUTT LAB</b></header>
+    <p class="eyebrow" id="ms-mode">傾斜を測定</p>
+    <h2 class="h-big" id="ms-title" aria-live="polite">測定中<span class="dots"></span></h2>
+    <p class="lead" id="ms-hint" aria-live="polite">スマホをグリーンに置いて、手を離してください。</p>
+    <div class="illust" id="ms-illust" aria-hidden="true"></div>
+    <div class="ms-read">
+      <div><span>前後</span><b id="ms-fwd">—</b></div>
+      <div><span>左右</span><b id="ms-side">—</b></div>
+    </div>
+    <div class="ms-progress" role="progressbar" aria-label="測定の進み具合" aria-valuemin="0" aria-valuemax="100" id="ms-prog"><i id="ms-bar"></i></div>
+    <div class="cta">
+      <button class="btn-volt" id="ms-next" type="button" hidden>置き直したら次へ <span class="arr" aria-hidden="true">→</span></button>
+      <button class="btn-ghost" id="ms-manual" type="button" hidden>手動で入力する</button>
+      <button class="btn-ghost" id="ms-cancel" type="button">中止する</button>
+    </div>
+  </section>
+
+  <!-- STEP 3: 測定完了 -->
+  <section class="screen" id="scr-result" hidden>
+    <header class="brand">GOLF GUTS <b>PUTT LAB</b></header>
+    <p class="eyebrow" id="rs-eyebrow">測定完了！</p>
+    <h2 class="h-big" id="rs-title">傾斜の測定が<br>完了しました！</h2>
+    <div class="illust" id="rs-illust" role="img"></div>
+    <dl class="slope-table">
+      <div><dt>前後傾斜</dt><dd id="rs-fwd"></dd></div>
+      <div><dt>左右傾斜</dt><dd id="rs-side"></dd></div>
+      <div><dt>傾斜強度</dt><dd id="rs-strength"></dd></div>
+    </dl>
+    <p class="note">測定した地点の傾斜がカップまで続くと仮定して計算します。途中で傾斜が変わるラインでは、結果は目安としてお使いください。</p>
+    <div class="cta">
+      <button class="btn-volt" id="rs-go" type="button">パッティングラインを計算する <span class="arr" aria-hidden="true">→</span></button>
+      <button class="btn-ghost" id="rs-redo" type="button">再測定する</button>
+    </div>
+  </section>
+
+  <!-- STEP 4–6: メイン -->
+  <section class="screen" id="scr-main" hidden>
+    <div class="topbar">
+      <header class="brand">GOLF GUTS <b>PUTT LAB</b></header>
+      <button class="icon-btn" id="mn-settings" type="button" aria-label="設定を開く">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2.2"/><circle cx="8" cy="17" r="2.2"/></svg>
+      </button>
+    </div>
+
+    <div class="slopebar">
+      <span class="lbl" id="mn-src">測定した傾斜</span>
+      <span class="val" id="mn-fwd"></span><span class="sep" aria-hidden="true"></span><span class="val" id="mn-side"></span>
+      <button id="mn-remeasure" type="button">再測定</button>
+    </div>
+
+    <section class="block" aria-labelledby="h-dist">
+      <h3 id="h-dist">カップまでの距離<span id="dist-m"></span></h3>
+      <div class="dist-row">
+        <button class="step-btn" id="dist-minus" type="button" aria-label="0.5ヤード短く">−</button>
+        <div class="dist-field">
+          <input id="dist-num" type="number" inputmode="decimal" min="0.5" max="20" step="0.5" value="3" aria-labelledby="h-dist">
+          <span class="unit">yd</span>
+        </div>
+        <button class="step-btn" id="dist-plus" type="button" aria-label="0.5ヤード長く">＋</button>
+      </div>
+      <input id="dist-range" type="range" min="0.5" max="20" step="0.5" value="3" aria-labelledby="h-dist">
+      <div class="chips" id="dist-chips" role="group" aria-label="よく使う距離"></div>
+    </section>
+
+    <section class="block" aria-labelledby="h-line">
+      <h3 id="h-line">パッティングライン</h3>
+      <div class="green" id="line-view" role="img"></div>
+      <div class="legend">
+        <span class="lg-solid"><i></i>ボールが転がる予想ライン</span>
+        <span class="lg-dash"><i></i>打ち出す方向</span>
+        <span class="lg-x" id="line-scale" hidden></span>
+      </div>
+      <div id="call" aria-live="polite"></div>
+    </section>
+
+    <section class="block" aria-labelledby="h-stroke" id="stroke-block">
+      <h3 id="h-stroke">必要な振り幅<span>アドレス → トップ</span></h3>
+      <div class="stroke-num">
+        <b id="st-cm">–</b><span class="unit">cm</span>
+        <span class="sub" id="st-sub"></span>
+      </div>
+      <div class="stroke-rows" id="stroke-view"></div>
+      <p class="note" id="st-note"></p>
+    </section>
+
+    <section class="block" aria-labelledby="h-metro">
+      <h3 id="h-metro">メトロノーム<span>90 BPM・3/4</span></h3>
+      <div class="metro-stage" id="metro-stage" aria-hidden="true"></div>
+      <div class="beats" id="beats" aria-hidden="true"><span>1</span><span>2</span><span>3</span></div>
+      <div class="phases" id="phases" aria-hidden="true">
+        <span><small>1拍目</small>始動</span>
+        <span><small>2拍目</small>トップ</span>
+        <span class="impact"><small>2.5拍</small>インパクト</span>
+        <span><small>3拍目</small>フォロー</span>
+      </div>
+      <button class="btn-volt" id="metro-btn" type="button" aria-pressed="false">再生する</button>
+      <p class="note">1拍目で引き始め、2拍目でトップ、2拍目と3拍目のちょうど真ん中で打ちます。音が出ないときは、スマホの消音モードと音量を確認してください。</p>
+    </section>
+
+    <p class="note foot">表示はすべて推定値です。測定地点の傾斜がカップまで一定という前提で計算しており、芝目・途中の起伏・スマホケースやカメラの出っ張りによる誤差は含まれません。</p>
+  </section>
+</div>
+
+<!-- 手動入力 -->
+<div class="sheet" id="sheet-manual" hidden role="dialog" aria-modal="true" aria-labelledby="mi-title">
+  <div class="sheet-in">
+    <div class="sheet-head">
+      <h2 id="mi-title">傾斜を手動で入力</h2>
+      <button class="icon-btn" id="mi-close" type="button" aria-label="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <p id="mi-msg">カップに向かって立ったときの傾斜を入力します。</p>
+    <div class="illust" id="mi-illust" aria-hidden="true"></div>
+    <div>
+      <div class="field-head"><label for="mi-fwd">前後の傾斜</label><output id="mi-fwd-out" for="mi-fwd"></output></div>
+      <input id="mi-fwd" type="range" min="-4" max="4" step="0.1" value="0">
+      <div class="range-ends"><span>下り 4°</span><span>平坦</span><span>上り 4°</span></div>
+    </div>
+    <div>
+      <div class="field-head"><label for="mi-side">左右の傾斜</label><output id="mi-side-out" for="mi-side"></output></div>
+      <input id="mi-side" type="range" min="-4" max="4" step="0.1" value="0">
+      <div class="range-ends"><span>左下がり 4°</span><span>平坦</span><span>右下がり 4°</span></div>
+    </div>
+    <button class="btn-volt" id="mi-ok" type="button">この傾斜で進む <span class="arr" aria-hidden="true">→</span></button>
+  </div>
+</div>
+
+<!-- 設定 -->
+<div class="sheet" id="sheet-settings" hidden role="dialog" aria-modal="true" aria-labelledby="set-title">
+  <div class="sheet-in">
+    <div class="sheet-head">
+      <h2 id="set-title">設定</h2>
+      <button class="icon-btn" id="set-close" type="button" aria-label="設定を閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+
+    <section class="block">
+      <h3 class="sec">グリーンの速さ</h3>
+      <p>スティンプメーターの値（ft）です。コースの掲示があればその数字に合わせてください。速いほど、よく曲がり、振り幅は小さくなります。</p>
+      <div class="chips four" id="stimp-chips" role="group" aria-label="グリーンの速さ"></div>
+      <div>
+        <div class="field-head"><label for="stimp-range">細かく調整</label><output id="stimp-out" for="stimp-range"></output></div>
+        <input id="stimp-range" type="range" min="7" max="13" step="0.5" value="9">
+      </div>
+    </section>
+
+    <section class="block">
+      <h3 class="sec">振り幅のキャリブレーション</h3>
+      <p>あなたの「振り幅と転がる距離」を登録すると、必要な振り幅があなたの距離感に合います。</p>
+      <ol class="how">
+        <li>平坦な練習グリーンで、上の「グリーンの速さ」をその場所に合わせる</li>
+        <li>メトロノーム（90 BPM・3/4拍子）に合わせて、決めた振り幅で3球打つ</li>
+        <li>転がった距離（yd）を入力して保存する</li>
+      </ol>
+      <div class="cal-grid" id="cal-grid"></div>
+      <p class="note">1つの振り幅だけでも登録できます。10・20・30cm の複数を登録すると、あなた専用の距離曲線になり精度が上がります。</p>
+      <div class="status" id="cal-status"></div>
+      <div class="row2">
+        <button class="btn-ghost" id="cal-clear" type="button">登録を消す</button>
+        <button class="btn-ghost pri" id="cal-save" type="button">保存する</button>
+      </div>
+    </section>
+
+    <section class="block">
+      <h3 class="sec">ゼロ点補正</h3>
+      <p>ケースやカメラの出っ張りで生じるズレを打ち消します。同じ場所で、スマホを180°回して2回測ります。床や机でもできます。</p>
+      <div class="status" id="zero-status"></div>
+      <div class="row2">
+        <button class="btn-ghost" id="zero-clear" type="button">補正を消す</button>
+        <button class="btn-ghost pri" id="zero-start" type="button">補正を始める</button>
+      </div>
+    </section>
+
+    <section class="block">
+      <h3 class="sec">傾斜の入力</h3>
+      <button class="btn-ghost" id="set-manual" type="button">傾斜を手動で入力する</button>
+    </section>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
