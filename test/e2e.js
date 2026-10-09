@@ -87,7 +87,8 @@ async function setRange(page, sel, v) {
   check('D1 メイン表示・傾斜引き継ぎ', (await txt(page, '#mn-fwd')) === '上り 1.5°' && (await txt(page, '#mn-side')) === '左下がり 1.0°');
   check('D2 初期距離 3yd', (await page.inputValue('#dist-num')) === '3');
   let call = (await txt(page, '#call')).replace(/\n/g, ' | ');
-  check('D3 左下がり → 左に曲がる・カップの右を狙う', /左に曲がります/.test(call) && /カップの右/.test(call), call);
+  check('D3 左下がり → 左に曲がる・カップの右を狙う', /左に曲がります/.test(call) && /カップ[\d.]+個分右/.test(call) && !/カップの右[\d.]/.test(call), call);
+  check('D3b 表記は「カップ1.5個分右」', (await txt(page, '#call .call-aim')).replace(/\s/g, '') === 'カップ1.5個分右', await txt(page, '#call .call-aim'));
   check('D4 振り幅 24cm（3yd・上り1.5°・仮基準）', (await txt(page, '#st-cm')) === '24', await txt(page, '#st-cm'));
   const rows = (await txt(page, '#stroke-view')).replace(/\n/g, ' ');
   check('D5 卵4・りんご3・ボトル1.2', /卵 約4個分/.test(rows) && /りんご 約3個分/.test(rows) && /ペットボトル 約1\.2本分/.test(rows), rows);
@@ -185,7 +186,7 @@ async function setRange(page, sel, v) {
   await page.screenshot({ path: shots + '/10-result-right.png' });
   await page.click('#rs-go');
   call = (await txt(page, '#call')).replace(/\n/g, ' | ');
-  check('F10 右下がり → 右に曲がる・カップの左を狙う', /右に曲がります/.test(call) && /カップの左/.test(call), call);
+  check('F10 右下がり → 右に曲がる・カップの左を狙う', /右に曲がります/.test(call) && /カップ[\d.]+個分左/.test(call) && !/カップの左[\d.]/.test(call), call);
   await page.click('#mn-settings');
   check('F11 キャリブレーションが残っている', (await page.inputValue('#cal-20-1')) === '4' && /登録済み/.test(await txt(page, '#cal-status')));
   await page.click('#cal-clear');
@@ -236,14 +237,14 @@ async function setRange(page, sel, v) {
     return (await txt(page, '#call')).replace(/\n/g, ' | ');
   }
   call = await manual(-4, 3, 3);
-  check('I1 急傾斜でも計算し、注意を添える', /右に曲がります/.test(call) && /カップの左/.test(call) && /傾斜が急です（合計 5\.0°）/.test(call) && (await page.locator('#stroke-block').isVisible()) && /カップに届く強さ/.test(await txt(page, '#st-sub')), call.slice(0, 60) + ' / ' + await txt(page, '#st-cm') + 'cm');
+  check('I1 急傾斜でも計算し、注意を添える', /右に曲がります/.test(call) && /カップ[\d.]+個分左/.test(call) && !/カップの左[\d.]/.test(call) && /傾斜が急です（合計 5\.0°）/.test(call) && (await page.locator('#stroke-block').isVisible()) && /カップに届く強さ/.test(await txt(page, '#st-sub')), call.slice(0, 60) + ' / ' + await txt(page, '#st-cm') + 'cm');
   await page.screenshot({ path: shots + '/12-steep.png', fullPage: true });
   call = await manual(0, 0, 3);
   check('I2 平坦 → ほぼまっすぐ・中心狙い', /ほぼまっすぐ/.test(call) && /カップの中心を狙う/.test(call), call);
   check('I3 平坦3yd → 21cm', (await txt(page, '#st-cm')) === '21', await txt(page, '#st-cm'));
   await page.screenshot({ path: shots + '/13-flat.png', fullPage: true });
   call = await manual(0, 1, 1);
-  check('I4 1yd・右下がり1° → 左フチ', /カップの左/.test(call) && /0\.5/.test(call) && /左フチ/.test(call), call);
+  check('I4 1yd・右下がり1° → 左フチ', /カップ[\d.]+個分左/.test(call) && !/カップの左[\d.]/.test(call) && /0\.5/.test(call) && /左フチ/.test(call), call);
   await page.screenshot({ path: shots + '/14-1yd.png', fullPage: true });
   // 19.5yd の数字が欠けずに入る（実機で「19.!」に見えた不具合）
   await page.fill('#dist-num', '19.5'); await page.locator('#dist-num').blur();
@@ -261,7 +262,7 @@ async function setRange(page, sel, v) {
   await page.click('#rs-go');
   await page.fill('#dist-num', '19.5'); await page.locator('#dist-num').blur();
   call = (await txt(page, '#call')).replace(/\n/g, ' | ');
-  check('L2 計算結果が出る（右に曲がる・カップの左）', /右に曲がります/.test(call) && /カップの左/.test(call) && !/求められません/.test(call), call.slice(0, 70));
+  check('L2 計算結果が出る（右に曲がる・カップの左）', /右に曲がります/.test(call) && /カップ[\d.]+個分左/.test(call) && !/カップの左[\d.]/.test(call) && !/求められません/.test(call), call.slice(0, 70));
   check('L3 振り幅が出る', (await page.locator('#stroke-block').isVisible()) && +(await txt(page, '#st-cm')) > 60, await txt(page, '#st-cm') + 'cm / ' + (await txt(page, '#st-sub')).replace(/\n/g, ' '));
   check('L4 急傾斜の注意が出る', /傾斜が急です（合計 9\.2°）/.test(call));
   check('L5 横はみ出しなし', (await overflow(page)) <= 0);

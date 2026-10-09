@@ -209,6 +209,7 @@ input[type="range"] { width: 100%; height: 34px; margin: 0; accent-color: var(--
 .call-break { display: flex; align-items: center; gap: 10px; font-size: 25px; font-weight: 900; line-height: 1.3; }
 .call-break svg { width: 34px; height: 34px; flex: none; }
 .call-aim { font-size: 30px; font-weight: 900; line-height: 1.15; color: var(--volt); letter-spacing: .01em; white-space: nowrap; }
+.call-aim .side { margin-left: 8px; }
 .call-aim.long { font-size: 26px; }
 .call-aim.long b { font-size: 62px; }
 .call-aim b { font-family: var(--font-display); font-weight: 700; font-size: 76px; line-height: .95; letter-spacing: 0; margin: 0 4px 0 6px; font-variant-numeric: tabular-nums; }

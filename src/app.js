@@ -420,9 +420,9 @@
     } else {
       var brk = sol.aim > 0 ? '左' : '右', aimSide = sol.aim > 0 ? '右' : '左';
       html += '<p class="call-break">' + curveIcon(sol.aim > 0 ? -1 : 1) + brk + 'に曲がります</p>';
-      html += '<p class="call-aim' + (numTxt(cups).length > 3 ? ' long' : '') + '">カップの' + aimSide + '<b>' + numTxt(cups) + '</b>個分</p>';
+      html += '<p class="call-aim' + (numTxt(cups).length > 3 ? ' long' : '') + '">カップ<b>' + numTxt(cups) + '</b>個分<span class="side">' + aimSide + '</span></p>';
       html += '<p class="call-sub">' + (cups === 0.5 ? 'カップの' + aimSide + 'フチが目安です（中心から' + aimSide + 'へ ' + lenTxt(Math.abs(sol.aim)) + '・推定）' : 'カップの中心から' + aimSide + 'へ ' + lenTxt(Math.abs(sol.aim)) + ' を狙う（推定）') + '</p>';
-      $('line-view').setAttribute('aria-label', brk + 'に曲がる。カップの' + aimSide + ' ' + numTxt(cups) + '個分を狙う');
+      $('line-view').setAttribute('aria-label', brk + 'に曲がる。カップ' + numTxt(cups) + '個分' + aimSide + 'を狙う');
     }
     // 急な傾斜でも計算はするが、前提が変わることを伝える
     if (sol.runaway) {
