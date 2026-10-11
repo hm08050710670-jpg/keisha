@@ -13,6 +13,7 @@
 | `index.html` | 公開される完成ファイル（`build.py` が生成） |
 | `src/physics.js` | 計算ロジック（ライン・狙い幅・振り幅） |
 | `src/app.js` | 画面・センサー測定・メトロノーム |
+| `src/sound.js` | メトロノームの音（GOLF GUTS METRONOME と同じ「ピッ・カッ・カッ」） |
 | `src/style.css` / `src/body.html` | デザインと画面構成 |
 | `test/` | 計算の単体テストと、ブラウザでの操作テスト |
 
@@ -21,4 +22,5 @@
 ```
 python3 build.py          # src/ から index.html を作り直す
 node test/physics.test.js # 計算のテスト
+node test/sound.test.js   # メトロノーム音のテスト
 ```

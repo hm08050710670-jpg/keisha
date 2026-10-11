@@ -34,8 +34,15 @@ async function setRange(page, sel, v) {
       // メトロノームの予約時刻を記録する
       window.__clicks = [];
       const AC = window.AudioContext;
-      const origStart = OscillatorNode.prototype.start;
-      OscillatorNode.prototype.start = function (when) { window.__clicks.push({ when, freq: this.frequency.value }); return origStart.apply(this, arguments); };
+      const origStart = AudioBufferSourceNode.prototype.start;
+      AudioBufferSourceNode.prototype.start = function (when) {
+        // 長さ1サンプルの無音（iPhone用の音出し準備）は拍として数えない
+        if (this.buffer && this.buffer.duration > 0.01) window.__clicks.push({ when, dur: this.buffer.duration });
+        return origStart.apply(this, arguments);
+      };
+      window.__osc = 0;
+      const oStart = OscillatorNode.prototype.start;
+      OscillatorNode.prototype.start = function () { window.__osc++; return oStart.apply(this, arguments); };
     });
     await page.goto(URL);
     await page.waitForTimeout(400);
@@ -135,7 +142,8 @@ async function setRange(page, sel, v) {
   const clicks = await page.evaluate(() => window.__clicks);
   const iv = clicks.slice(1).map((c, i) => c.when - clicks[i].when);
   check('E2 拍の間隔 0.6667秒 (90BPM)', iv.length >= 5 && iv.every(d => Math.abs(d - 60 / 90) < 1e-6), iv.slice(0, 4).map(d => d.toFixed(4)).join(','));
-  check('E3 3拍子・1拍目だけ強調', clicks.slice(0, 6).map(c => c.freq > 1200 ? 'A' : 'b').join('') === 'AbbAbb', clicks.slice(0, 6).map(c => Math.round(c.freq)).join(','));
+  check('E3 3拍子・1拍目「ピッ」(0.3秒)／2・3拍目「カッ」(0.06秒)', clicks.slice(0, 6).map(c => c.dur > 0.2 ? 'A' : 'b').join('') === 'AbbAbb', clicks.slice(0, 6).map(c => c.dur.toFixed(2)).join(','));
+  check('E3b 旧い電子音（発振器）は使っていない', (await page.evaluate(() => window.__osc)) === 0);
   const phSeq = log.map(l => l.ph).filter((v, i, a) => i === 0 || v !== a[i - 1]).join('');
   check('E4 始動→トップ→インパクト→フォロー の順', /0123(0123)?/.test(phSeq), phSeq);
   // フェーズの切り替わり間隔
@@ -151,6 +159,12 @@ async function setRange(page, sel, v) {
   check('E7 停止', (await txt(page, '#metro-btn')) === '再生する');
   const n1 = (await page.evaluate(() => window.__clicks.length)); await page.waitForTimeout(900);
   check('E8 停止後は音を予約しない', (await page.evaluate(() => window.__clicks.length)) === n1);
+  // 再生し直しても、1拍目から正しい間隔で始まる
+  await page.click('#metro-btn'); await page.waitForTimeout(1600);
+  const again = (await page.evaluate(() => window.__clicks)).slice(n1);
+  const iv2 = again.slice(1).map((c, i) => c.when - again[i].when);
+  check('E9 再生し直し: 1拍目から 0.6667秒間隔', again.length >= 3 && again[0].dur > 0.2 && iv2.every(d => Math.abs(d - 60 / 90) < 1e-6), again.slice(0, 4).map(c => c.dur.toFixed(2)).join(',') + ' / ' + iv2.slice(0, 3).map(d => d.toFixed(4)).join(','));
+  await page.click('#metro-btn');
 
   // ===== F. 設定：グリーン速度・キャリブレーション =====
   const before = { call: await txt(page, '#call'), st: await txt(page, '#st-cm') };

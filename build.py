@@ -8,7 +8,7 @@ root = pathlib.Path(__file__).parent
 src = lambda n: (root / 'src' / n).read_text(encoding='utf-8')
 FONTS = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap">'
 page = ('<title>GOLF GUTS PUTT LAB</title>\n' + FONTS + '\n<style>\n' + src('style.css') + '</style>\n\n'
-        + src('body.html') + '\n<script>\n' + src('physics.js') + '</script>\n<script>\n' + src('app.js') + '</script>\n')
+        + src('body.html') + '\n<script>\n' + src('physics.js') + '</script>\n<script>\n' + src('sound.js') + '</script>\n<script>\n' + src('app.js') + '</script>\n')
 (root / 'dist').mkdir(exist_ok=True)
 (root / 'dist' / 'artifact.html').write_text(page, encoding='utf-8')
 head = ('<!doctype html>\n<html lang="ja">\n<head>\n<meta charset="utf-8">\n'

@@ -587,9 +587,10 @@
      音は Web Audio の時計で先に予約し、描画はその時計を読むだけにして分離する。
      1小節 = 2.000秒: 始動 0.000 / トップ 0.667 / インパクト 1.000 / フォロー 1.333
      ===================================================================== */
+  var METRO_GAIN = 0.7; // 音量（端末の音量ボタンで調整する前提の固定値）
   var BEAT = 60 / 90, BAR = BEAT * 3, T_TOP = BEAT, T_HIT = BEAT * 1.5, T_FOL = BEAT * 2;
   var Metro = {
-    ctx: null, playing: false, timer: null, raf: 0, t0: 0, nextBeat: 0, beatNo: 0, perf0: 0, useAudio: false, px: 3, els: null,
+    ctx: null, master: null, sounds: null, playing: false, timer: null, raf: 0, t0: 0, nextBeat: 0, beatNo: 0, perf0: 0, useAudio: false, px: 3, els: null,
 
     layout: function () {
       var L = state.strokeCm, W = 340, H = 128, gx = 176, gy = 98;
@@ -654,13 +655,25 @@
     },
     phase: function () { var t = this.now() - this.t0; return t < 0 ? 0 : t % BAR; },
 
+    /** GOLF GUTS METRONOME と同じ音: 1拍目「ピッ」、2・3拍目「カッ」（波形は sound.js で生成） */
     click: function (when, accent) {
-      var c = this.ctx, o = c.createOscillator(), g = c.createGain();
-      o.type = 'square'; o.frequency.value = accent ? 1568 : 1047;       // 1拍目だけ高く・強く
-      g.gain.setValueAtTime(0.0001, when);
-      g.gain.exponentialRampToValueAtTime(accent ? 0.5 : 0.28, when + 0.002);
-      g.gain.exponentialRampToValueAtTime(0.0001, when + (accent ? 0.09 : 0.06));
-      o.connect(g); g.connect(c.destination); o.start(when); o.stop(when + 0.12);
+      var s = this.ctx.createBufferSource();
+      s.buffer = accent ? this.sounds.accent : this.sounds.click;
+      s.connect(this.master); s.start(when);
+    },
+    prepareSound: function () {
+      var c = this.ctx;
+      if (!this.sounds) {
+        var raw = MetroSound.make(c.sampleRate);
+        var toBuf = function (arr) { var b = c.createBuffer(1, arr.length, c.sampleRate); b.getChannelData(0).set(arr); return b; };
+        this.sounds = { accent: toBuf(raw.accent), click: toBuf(raw.click) };
+      }
+      this.master = c.createGain();
+      this.master.gain.value = METRO_GAIN;
+      this.master.connect(c.destination);
+      // iPhone では、ボタン操作の中で無音を1回鳴らすと以後の音が出るようになる
+      var b = c.createBuffer(1, 1, c.sampleRate), u = c.createBufferSource();
+      u.buffer = b; u.connect(c.destination); u.start(0);
     },
     schedule: function () {
       while (this.nextBeat < this.ctx.currentTime + 0.15) {
@@ -679,6 +692,7 @@
           // iPhone の消音スイッチでも鳴るようにする（対応端末のみ）
           try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* 任意 */ }
           if (this.ctx.state !== 'running') this.ctx.resume();
+          this.prepareSound();
           this.useAudio = true;
         } catch (e) { this.useAudio = false; }
       }
@@ -700,6 +714,8 @@
       if (!this.playing) return;
       this.playing = false;
       clearInterval(this.timer); cancelAnimationFrame(this.raf);
+      // 予約済みの音も止める（次に再生したとき、前回の残りが鳴らないように）
+      if (this.master) { try { this.master.gain.value = 0; this.master.disconnect(); } catch (e) { /* 無視 */ } this.master = null; }
       if (this.ctx) { try { this.ctx.suspend(); } catch (e) { /* 無視 */ } }
       releaseWake();
       this.draw(0);
