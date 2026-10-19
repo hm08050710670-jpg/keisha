@@ -24,7 +24,6 @@
     stimp: clamp(Number(store.get('stimp', 9)) || 9, 7, 13),
     cal: sanitizeCal(store.get('cal', [])),
     zero: sanitizeZero(store.get('zero', null)),
-    orient: { L: 1, R: 1, P: 1 }[store.get('orient', 'L')] ? store.get('orient', 'L') : 'L', // L: 横置き・上側が左 / R: 横置き・上側が右 / P: 縦置き
     strokeCm: 21
   };
 
@@ -39,22 +38,6 @@
   function sanitizeZero(z) {
     return (z && isFinite(z.fwd) && isFinite(z.side)) ? { fwd: +z.fwd, side: +z.side } : null;
   }
-
-  /* ---------- スマホの置き方 ----------
-     端末そのものの傾きは常に同じ2つの値で表す:
-       b … 端末の上側（カメラ側）が持ち上がっている角度
-       s … 端末の右側が下がっている角度
-     置き方によって、これを「カップに向かって上り」「右下がり」に読み替える。 */
-  var ORIENTS = {
-    L: { name: '横置き・上側が左', T: [-1, 0], R: [0, 1], steps: ['スマホの画面を上に向ける', 'スマホを横にして、上側（カメラ側）を左に向ける', '長い辺をカップに向けてグリーンに置き、静止させる'], edge: '右側の長い辺',
-      map: function (b, s) { return { fwd: -s, side: b }; } },
-    R: { name: '横置き・上側が右', T: [1, 0], R: [0, -1], steps: ['スマホの画面を上に向ける', 'スマホを横にして、上側（カメラ側）を右に向ける', '長い辺をカップに向けてグリーンに置き、静止させる'], edge: '左側の長い辺',
-      map: function (b, s) { return { fwd: s, side: -b }; } },
-    P: { name: '縦置き・上側がカップ', T: [0, 1], R: [1, 0], steps: ['スマホの画面を上に向ける', 'スマホの上側をカップに向ける', 'グリーンに置いて静止させる'], edge: '上側',
-      map: function (b, s) { return { fwd: b, side: s }; } }
-  };
-  function orient() { return ORIENTS[state.orient] || ORIENTS.L; }
-  function mapSlope(b, s) { return orient().map(b, s); }
 
   /* ---------- 表示用の言葉 ---------- */
   var FLAT = 0.2; // これ未満は「ほぼ平坦」
@@ -132,30 +115,21 @@
     s += '<text x="' + (top[0] + 32) + '" y="' + (top[1] + 14) + '" font-size="12" font-weight="700" fill="' + C.chalk + '">カップ</text>';
 
     if (o.phone) {
-      // スマホ。置き方（横置き・縦置き）どおりの向きで描く。u: 端末の右方向, v: 端末の上方向
-      var OR = ORIENTS[o.orient || state.orient] || ORIENTS.L, T = OR.T, Rv = OR.R, py = -0.2, land = OR !== ORIENTS.P;
-      function ph(u, v, dz) { return on(u * Rv[0] + v * T[0], py + u * Rv[1] + v * T[1], dz); }
-      function prect(u0, v0, hw, hl, r, dz) {
-        var out = [], cs = [[u0 + hw - r, v0 + hl - r, 0], [u0 - hw + r, v0 + hl - r, 90], [u0 - hw + r, v0 - hl + r, 180], [u0 + hw - r, v0 - hl + r, 270]];
-        cs.forEach(function (c) { for (var i = 0; i <= 6; i++) { var a = (c[2] + i * 15) * DEG; out.push(ph(c[0] + r * Math.cos(a), c[1] + r * Math.sin(a), dz)); } });
-        return out;
-      }
-      s += '<polygon points="' + pts(prect(0, 0, 0.215, 0.43, 0.07, 0)) + '" fill="#020705" opacity=".55" transform="translate(3,4)"/>';
-      s += '<polygon points="' + pts(prect(0, 0, 0.215, 0.43, 0.07, 0.045)) + '" fill="#0c100e" stroke="' + C.chalk + '" stroke-width="1.6" stroke-linejoin="round"/>';
-      s += '<polygon points="' + pts(prect(0, 0, 0.18, 0.395, 0.05, 0.047)) + '" fill="' + C.t800 + '" stroke="' + C.chalk + '" stroke-opacity=".25" stroke-width="1"/>';
-      s += '<polygon points="' + pts(prect(0, 0.345, 0.05, 0.012, 0.011, 0.048)) + '" fill="' + C.chalk + '" opacity=".7"/>';   // 上側のスピーカー
-      var cam = ph(0.14, 0.37, 0.049);
-      s += '<circle cx="' + cam[0].toFixed(1) + '" cy="' + cam[1].toFixed(1) + '" r="3.2" fill="' + C.chalk + '" opacity=".85"/>';                   // カメラ
-      s += '<polygon points="' + pts([ph(0, 0.27, 0.048), ph(-0.085, 0.1, 0.048), ph(0.085, 0.1, 0.048)]) + '" fill="' + C.volt + '"/>';
-      s += '<polygon points="' + pts(prect(0, -0.1, 0.022, 0.16, 0.02, 0.048)) + '" fill="' + C.volt + '"/>';
-      // カップに向ける辺 → カップ の矢印
-      var a0 = on(0, py + (land ? 0.275 : 0.49)), a1 = on(0, cyc - 0.16), hd = arrowHead(a0, a1, 9);
+      // スマホ（上側がカップ向き）
+      var py = -0.2;
+      s += '<polygon points="' + pts(rrect(0, py, 0.215, 0.43, 0.07, 0)) + '" fill="#020705" opacity=".55" transform="translate(3,4)"/>';
+      s += '<polygon points="' + pts(rrect(0, py, 0.215, 0.43, 0.07, 0.045)) + '" fill="#0c100e" stroke="' + C.chalk + '" stroke-width="1.6" stroke-linejoin="round"/>';
+      s += '<polygon points="' + pts(rrect(0, py, 0.18, 0.395, 0.05, 0.047)) + '" fill="' + C.t800 + '" stroke="' + C.chalk + '" stroke-opacity=".25" stroke-width="1"/>';
+      s += '<polygon points="' + pts(rrect(0, py + 0.345, 0.05, 0.012, 0.011, 0.048)) + '" fill="' + C.chalk + '" opacity=".7"/>';
+      s += '<polygon points="' + pts([on(0, py + 0.27, 0.048), on(-0.085, py + 0.1, 0.048), on(0.085, py + 0.1, 0.048)]) + '" fill="' + C.volt + '"/>';
+      s += '<polygon points="' + pts(rrect(0, py - 0.1, 0.022, 0.16, 0.02, 0.048)) + '" fill="' + C.volt + '"/>';
+      // スマホ上側 → カップ の矢印
+      var a0 = on(0, py + 0.49), a1 = on(0, cyc - 0.16), hd = arrowHead(a0, a1, 9);
       s += '<line x1="' + a0[0] + '" y1="' + a0[1] + '" x2="' + a1[0] + '" y2="' + a1[1] + '" stroke="' + C.volt + '" stroke-width="3" stroke-dasharray="5 5" stroke-linecap="round"/>';
       s += '<polygon points="' + pts(hd) + '" fill="' + C.volt + '"/>';
       if (o.labels) {
-        var lp = ph(0, 0.5, 0.05), left = T[0] < 0;
-        if (land) s += '<text x="' + (lp[0] + (left ? -4 : 4)).toFixed(1) + '" y="' + (lp[1] + 4).toFixed(1) + '" text-anchor="' + (left ? 'end' : 'start') + '" font-size="12" font-weight="700" fill="' + C.volt + '">上側（カメラ）</text>';
-        else s += '<text x="' + (on(0.3, py + 0.36, 0.05)[0] + 4) + '" y="' + (on(0.3, py + 0.36, 0.05)[1] + 4) + '" font-size="12" font-weight="700" fill="' + C.volt + '">スマホの上側</text>';
+        var lp = on(0.3, py + 0.36, 0.05);
+        s += '<text x="' + (lp[0] + 4) + '" y="' + (lp[1] + 4) + '" font-size="12" font-weight="700" fill="' + C.volt + '">スマホの上側</text>';
       }
     } else {
       // ボール
@@ -196,16 +170,16 @@
       if (e.beta == null || e.gamma == null) return;
       var b = e.beta * DEG, g = e.gamma * DEG;
       Sensor.last = {
-        b: e.beta,                                                       // 上側が持ち上がっている角度
-        s: Math.asin(clamp(Math.cos(b) * Math.sin(g), -1, 1)) / DEG,    // 右側が水平から下がっている角度
+        fwd: e.beta,
+        side: Math.asin(clamp(Math.cos(b) * Math.sin(g), -1, 1)) / DEG, // 右辺が水平から下がっている角度
         faceUp: Math.abs(e.beta) < 90
       };
-      Sensor.acc.f += Sensor.last.b; Sensor.acc.s += Sensor.last.s; Sensor.acc.n++;
+      Sensor.acc.f += Sensor.last.fwd; Sensor.acc.s += Sensor.last.side; Sensor.acc.n++;
       Sensor.lastT = Date.now();
     },
     /** 前回の呼び出し以降に届いた値の平均（ノイズを減らす） */
     take: function () {
-      var a = Sensor.acc, out = a.n ? { b: a.f / a.n, s: a.s / a.n } : null;
+      var a = Sensor.acc, out = a.n ? { fwd: a.f / a.n, side: a.s / a.n } : null;
       Sensor.acc = { f: 0, s: 0, n: 0 };
       return out;
     },
@@ -256,7 +230,6 @@
     $('ms-next').hidden = true; $('ms-manual').hidden = true;
     $('ms-title').innerHTML = '準備中<span class="dots"></span>';
     $('ms-hint').textContent = 'センサーを確認しています。';
-    $('ms-hint').dataset.place = (state.orient === 'P' ? 'スマホの上側をカップに向けて' : 'スマホを横にして、' + orient().edge + 'をカップに向けて') + 'グリーンに置き、手を離してください。';
     $('ms-fwd').textContent = '—'; $('ms-side').textContent = '—';
     setProgress(0);
     $('ms-illust').innerHTML = plateSVG({ id: 'ms', phone: true, pulse: true, fixed: true });
@@ -296,10 +269,8 @@
       var now = Date.now(), cur = Sensor.last;
       if (!cur || now - Sensor.lastT > 1500) { $('ms-hint').textContent = 'センサーの値を待っています。'; return; }
       var avg = Sensor.take() || cur;
-      // 端末のズレ（ゼロ点補正）は端末の向きで引き、そのあと置き方に応じてグリーンの傾きに読み替える
-      var db = avg.b - (raw || !state.zero ? 0 : state.zero.fwd), ds = avg.s - (raw || !state.zero ? 0 : state.zero.side);
-      var mp = mapSlope(db, ds), f = mp.fwd, s = mp.side;
-      buf.push({ t: now, f: f, s: s, db: db, ds: ds });
+      var f = avg.fwd - (raw || !state.zero ? 0 : state.zero.fwd), s = avg.side - (raw || !state.zero ? 0 : state.zero.side);
+      buf.push({ t: now, f: f, s: s });
       while (buf.length && now - buf[0].t > HOLD_MS + 500) buf.shift();
       ema = ema ? { f: ema.f + (f - ema.f) * 0.25, s: ema.s + (s - ema.s) * 0.25 } : { f: f, s: s }; // 表示用の平滑化
       $('ms-fwd').textContent = fwdText(ema.f); $('ms-side').textContent = sideText(ema.s);
@@ -313,7 +284,7 @@
       var stable = flat && win.length >= 6 && range(win, 'f') < STABLE_RANGE && range(win, 's') < STABLE_RANGE;
       if (!stable) {
         stableSince = 0; setProgress(0);
-        $('ms-hint').textContent = !flat ? '画面を上にして、平らに置いてください。' : $('ms-hint').dataset.place;
+        $('ms-hint').textContent = !flat ? '画面を上にして、平らに置いてください。' : 'スマホを置いて、手を離してください。';
       } else {
         if (!stableSince) stableSince = now - WINDOW_MS / 2;
         var p = clamp((now - stableSince) / HOLD_MS, 0, 1);
@@ -323,7 +294,7 @@
           var hold = buf.filter(function (b) { return b.t >= stableSince; });
           if (range(hold, 'f') < STABLE_RANGE * 1.5 && range(hold, 's') < STABLE_RANGE * 1.5) {
             stopMeasure();
-            return finishMeasure(raw ? { fwd: mean(hold, 'db'), side: mean(hold, 'ds') } : { fwd: mean(hold, 'f'), side: mean(hold, 's') });
+            return finishMeasure({ fwd: mean(hold, 'f'), side: mean(hold, 's') });
           }
           stableSince = 0;
         }
@@ -356,7 +327,7 @@
       $('ms-next').onclick = function () { startMeasure('zero2'); };
       return;
     }
-    // 180°回すと本当の傾斜は符号が反転し、端末固有のズレだけが残る（端末の向きで保存。置き方を変えてもそのまま使える）
+    // 180°回すと本当の傾斜は符号が反転し、端末固有のズレだけが残る
     state.zero = { fwd: (Measure.first.fwd + m.fwd) / 2, side: (Measure.first.side + m.side) / 2 };
     store.set('zero', state.zero);
     renderSettings();
@@ -783,7 +754,7 @@
     $('cal-status').innerHTML = head + '<small>いまのグリーンの速さ（' + state.stimp.toFixed(1) + 'ft）での目安：' + guide + '</small>';
 
     $('zero-status').innerHTML = state.zero
-      ? '補正あり<small>端末のズレ（上下 ' + signed(state.zero.fwd) + '° ／ 左右 ' + signed(state.zero.side) + '°）を差し引いて測定します。置き方を変えてもそのまま有効です</small>'
+      ? '補正あり<small>前後 ' + signed(state.zero.fwd) + '° ／ 左右 ' + signed(state.zero.side) + '° を差し引いて測定します</small>'
       : '補正なし';
     $('zero-clear').disabled = !state.zero;
   }
@@ -799,20 +770,8 @@
   /* =====================================================================
      起動
      ===================================================================== */
-  function renderOrient() {
-    $('start-illust').innerHTML = plateSVG({ id: 'st', phone: true, labels: true });
-    $('start-steps').innerHTML = orient().steps.map(function (t, i) { return '<li><span class="n">' + (i + 1) + '</span>' + t + '</li>'; }).join('');
-    Array.prototype.forEach.call($('orient-chips').children, function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === state.orient)); });
-  }
-  function setOrient(v) {
-    if (!ORIENTS[v]) return;
-    state.orient = v; store.set('orient', v); renderOrient();
-  }
-
   function init() {
-    $('orient-chips').innerHTML = Object.keys(ORIENTS).map(function (k) { return '<button class="chip" type="button" data-v="' + k + '" aria-pressed="false">' + ORIENTS[k].name.replace('・', '<small>') + '</small></button>'; }).join('');
-    $('orient-chips').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) setOrient(b.dataset.v); });
-    renderOrient();
+    $('start-illust').innerHTML = plateSVG({ id: 'st', phone: true, labels: true });
 
     // 距離チップ・速さチップ・キャリブレーション表を組み立てる
     $('dist-chips').innerHTML = DIST_CHIPS.map(function (v) { return '<button class="chip" type="button" data-v="' + v + '" aria-pressed="false">' + v + '<small>yd</small></button>'; }).join('');

@@ -5,8 +5,12 @@
     <header class="brand">GOLF GUTS <b>PUTT LAB</b></header>
     <h1 class="h-big">まずはスマホで<br>グリーンの傾斜を<br>測定しましょう！</h1>
     <p class="lead">スマホをグリーンに置くだけで、上り・下り・左右の傾斜をチェックできます。</p>
-    <div class="illust" id="start-illust" role="img" aria-label="グリーンの上に横向きに置いたスマホ。長い辺がカップを向いている"></div>
-    <ol class="steps" id="start-steps"></ol>
+    <div class="illust" id="start-illust" role="img" aria-label="グリーンの上に置いたスマホ。スマホの上側がカップを向いている"></div>
+    <ol class="steps">
+      <li><span class="n">1</span>スマホの画面を上に向ける</li>
+      <li><span class="n">2</span>スマホの上側をカップに向ける</li>
+      <li><span class="n">3</span>グリーンに置いて静止させる</li>
+    </ol>
     <div class="cta">
       <button class="btn-volt" id="btn-measure" type="button">傾斜を測定する <span class="arr" aria-hidden="true">→</span></button>
       <button class="btn-text" id="btn-manual" type="button">センサーを使わず手動で入力する</button>
@@ -18,7 +22,7 @@
     <header class="brand">GOLF GUTS <b>PUTT LAB</b></header>
     <p class="eyebrow" id="ms-mode">傾斜を測定</p>
     <h2 class="h-big" id="ms-title" aria-live="polite">測定中<span class="dots"></span></h2>
-    <p class="lead" id="ms-hint" aria-live="polite">スマホを横にして、グリーンに置いて手を離してください。</p>
+    <p class="lead" id="ms-hint" aria-live="polite">スマホをグリーンに置いて、手を離してください。</p>
     <div class="illust" id="ms-illust" aria-hidden="true"></div>
     <div class="ms-read">
       <div><span>前後</span><b id="ms-fwd">—</b></div>
@@ -177,14 +181,8 @@
     </section>
 
     <section class="block">
-      <h3 class="sec">スマホの置き方</h3>
-      <p>測定するときのスマホの向きです。スタート画面の図と手順も、この設定に合わせて変わります。</p>
-      <div class="chips three" id="orient-chips" role="group" aria-label="スマホの置き方"></div>
-    </section>
-
-    <section class="block">
       <h3 class="sec">ゼロ点補正</h3>
-      <p>ケースやカメラの出っ張りで生じるズレを打ち消します。同じ場所で、スマホを180°回して2回測ります。床や机でもできます。置き方を変えても補正はそのまま使えます。</p>
+      <p>ケースやカメラの出っ張りで生じるズレを打ち消します。同じ場所で、スマホを180°回して2回測ります。床や机でもできます。</p>
       <div class="status" id="zero-status"></div>
       <div class="row2">
         <button class="btn-ghost" id="zero-clear" type="button">補正を消す</button>

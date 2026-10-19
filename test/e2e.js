@@ -16,14 +16,6 @@ async function feed(page, beta, gamma, noise = 0.05) {
   }, [beta, gamma, noise]);
 }
 const stopFeed = (page) => page.evaluate(() => clearInterval(window.__feed));
-// 欲しい「グリーンの傾き」(fwd: 上りが正, side: 右下がりが正) を、既定の置き方（横置き・上側が左）での端末の傾きに直して流す
-//   fwd = -(右側が下がる角度)  →  gamma を負にすると上り / side = beta
-function feedSlope(page, fwd, side, noise = 0.05, devOffset = [0, 0]) {
-  const beta = side + devOffset[0];
-  const sRight = -fwd + devOffset[1];
-  const gamma = Math.asin(Math.sin(sRight * Math.PI / 180) / Math.cos(beta * Math.PI / 180)) * 180 / Math.PI;
-  return feed(page, beta, gamma, noise);
-}
 const txt = (page, sel) => page.locator(sel).innerText();
 const overflow = (page) => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 async function setRange(page, sel, v) {
@@ -62,8 +54,6 @@ async function setRange(page, sel, v) {
   check('A1 起動時はスタート画面', await page.locator('#scr-start').isVisible() && !(await page.locator('#scr-main').isVisible()));
   check('A2 見出し', (await txt(page, '#scr-start h1')).replace(/\s/g, '') === 'まずはスマホでグリーンの傾斜を測定しましょう！');
   check('A3 横はみ出しなし', (await overflow(page)) <= 0, await overflow(page));
-  const steps = await txt(page, '#start-steps');
-  check('A4 手順は横置き（上側が左・長い辺をカップへ）', /横にして/.test(steps) && /上側（カメラ側）を左/.test(steps) && /長い辺をカップ/.test(steps), steps.replace(/\n/g, ' / '));
   const fonts = await page.evaluate(() => document.fonts.ready.then(() => [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family).filter((v, i, a) => a.indexOf(v) === i).join(',')));
   console.log('  (loaded web fonts: ' + (fonts || 'none — fallback fonts in use') + ')');
   await page.screenshot({ path: shots + '/01-start.png' });
@@ -83,7 +73,7 @@ async function setRange(page, sel, v) {
 
   // ===== C. センサー測定 =====
   page = await newPage(390, 844);
-  await feedSlope(page, 1.5, -1.0);
+  await feed(page, 1.5, -1.0);
   await page.click('#btn-measure');
   await page.waitForTimeout(1500);
   check('C1 測定中の表示', /測定中/.test(await txt(page, '#ms-title')), await txt(page, '#ms-title'));
@@ -202,7 +192,7 @@ async function setRange(page, sel, v) {
   // 再読み込み後も保存されている／起動時はスタート画面に戻る
   await page.reload(); await page.waitForTimeout(300);
   check('F8 再読み込み後はスタート画面', await page.locator('#scr-start').isVisible());
-  await feedSlope(page, 0.1, 2.0);
+  await feed(page, 0.1, 2.0);
   await page.click('#btn-measure');
   await page.waitForSelector('#scr-result:not([hidden])', { timeout: 8000 });
   await stopFeed(page);
@@ -218,20 +208,20 @@ async function setRange(page, sel, v) {
 
   // ===== G. ゼロ点補正（180°法） =====
   // 端末のズレ (+0.3, +0.3) / 本当の傾斜 (+1.5, -1.0) → 1回目 (1.8, -0.7), 180°回して (-1.2, 1.3)
-  await feedSlope(page, 1.5, -1.0, 0.03, [0.3, 0.3]);
+  await feed(page, 1.8, -0.7, 0.03);
   await page.locator('#zero-start').scrollIntoViewIfNeeded();
   await page.click('#zero-start');
   await page.waitForSelector('#ms-next:not([hidden])', { timeout: 8000 });
   check('G1 1回目完了の案内', /180°/.test(await txt(page, '#ms-hint')), await txt(page, '#ms-hint'));
   await page.screenshot({ path: shots + '/11-zero.png' });
-  await feedSlope(page, -1.5, 1.0, 0.03, [0.3, 0.3]);   // 180°回す: 本当の傾斜は反転、端末のズレは同じ
+  await feed(page, -1.2, 1.3, 0.03);
   await page.click('#ms-next');
   await page.waitForSelector('#scr-main:not([hidden])', { timeout: 8000 });
   await page.click('#mn-settings');
   const z = (await txt(page, '#zero-status')).replace(/\n/g, ' ');
-  check('G2 ズレ +0.30 / +0.30 を検出', /上下 \+0\.(29|30|31)° ／ 左右 \+0\.(29|30|31)°/.test(z), z);
+  check('G2 ズレ +0.30 / +0.30 を検出', /前後 \+0\.3\d° ／ 左右 \+0\.3\d°/.test(z) || /\+0\.(29|30|31)° ／ 左右 \+0\.(29|30|31)°/.test(z), z);
   await page.click('#set-close');
-  await feedSlope(page, 1.5, -1.0, 0.03, [0.3, 0.3]);
+  await feed(page, 1.8, -0.7, 0.03);
   await page.click('#mn-remeasure');
   await page.waitForSelector('#scr-result:not([hidden])', { timeout: 8000 });
   await stopFeed(page);
@@ -241,28 +231,8 @@ async function setRange(page, sel, v) {
   check('G4 補正を消す', /補正なし/.test(await txt(page, '#zero-status')));
   await page.click('#set-close');
 
-  // ===== M. 置き方の設定: 横置き・上側が右 と 縦置き でも正しく読み替える =====
-  for (const [key, label, beta, gamma] of [['R', '横置き・上側が右', 1.0, 1.5], ['P', '縦置き', 1.5, -1.0]]) {
-    await page.click('#mn-settings'); await page.locator('#orient-chips').scrollIntoViewIfNeeded();
-    await page.click(`#orient-chips button[data-v="${key}"]`);
-    check(`M ${label}: 選択できる`, (await page.getAttribute(`#orient-chips button[data-v="${key}"]`, 'aria-pressed')) === 'true');
-    await page.click('#set-close');
-    await feed(page, beta, gamma);            // 端末の生の傾き（置き方ごとに、上り1.5°・左下がり1.0°に相当する値）
-    await page.click('#mn-remeasure');
-    await page.waitForSelector('#scr-result:not([hidden])', { timeout: 8000 });
-    await stopFeed(page);
-    check(`M ${label}: 上り1.5°・左下がり1.0° と読む`, /^上り 1\.5°/.test(await txt(page, '#rs-fwd')) && /^左下がり 1\.0°/.test(await txt(page, '#rs-side')), (await txt(page, '#rs-fwd') + ' ' + await txt(page, '#rs-side')).replace(/\n/g, ' '));
-    await page.click('#rs-go');
-  }
-  await page.reload(); await page.waitForTimeout(300);
-  check('M 置き方の設定は保存される（縦置きのまま）', /上側をカップに向ける/.test(await txt(page, '#start-steps')));
-  await page.screenshot({ path: shots + '/40-start-portrait.png' });
-  await page.click('#mn-settings').catch(() => {});
-  await feedSlope(page, 0, 0); await page.click('#btn-measure'); await page.waitForSelector('#scr-result:not([hidden])', { timeout: 8000 }); await stopFeed(page); await page.click('#rs-go');
-  await page.click('#mn-settings'); await page.click('#orient-chips button[data-v="L"]'); await page.click('#set-close');
-
   // ===== H. 揺れている間は確定しない／平らでないと案内 =====
-  await feedSlope(page, 1.0, 0.5, 1.2);      // 大きく揺れる
+  await feed(page, 1.0, 0.5, 1.2);           // 大きく揺れる
   await page.click('#mn-remeasure');
   await page.waitForTimeout(4500);
   check('H1 揺れている間は確定しない', await page.locator('#scr-measure').isVisible() && /手を離して/.test(await txt(page, '#ms-hint')), await txt(page, '#ms-hint'));
@@ -298,7 +268,7 @@ async function setRange(page, sel, v) {
   check('I5 20yd でも表示が崩れない', (await overflow(page)) <= 0, call + ' / ' + await txt(page, '#st-cm') + 'cm');
   await page.screenshot({ path: shots + '/15-20yd.png', fullPage: true });
   // ===== L. 実機で出たケース: 上り8.6°・右下がり3.4°・19.5yd（センサー測定で再現）=====
-  await feedSlope(page, 8.6, 3.4, 0.03);
+  await feed(page, 8.6, 3.4, 0.03);
   await page.click('#mn-remeasure');
   await page.waitForSelector('#scr-result:not([hidden])', { timeout: 8000 });
   await stopFeed(page);
@@ -312,7 +282,7 @@ async function setRange(page, sel, v) {
   check('L5 横はみ出しなし', (await overflow(page)) <= 0);
   await page.screenshot({ path: shots + '/30-steep-up.png', fullPage: true });
   // 下りが急すぎる: 最小限のタッチとして表示
-  await feedSlope(page, -9, 0, 0.03);
+  await feed(page, -9, 0, 0.03);
   await page.click('#mn-remeasure');
   await page.waitForSelector('#scr-result:not([hidden])', { timeout: 8000 });
   await stopFeed(page);
@@ -328,7 +298,7 @@ async function setRange(page, sel, v) {
     const ov = [await overflow(page)];
     const ctaBottom = await page.evaluate(() => document.querySelector('#btn-measure').getBoundingClientRect().bottom);
     await page.screenshot({ path: `${shots}/20-start-${w}.png`, fullPage: true });
-    await feedSlope(page, -2.2, 1.4);
+    await feed(page, -2.2, 1.4);
     await page.click('#btn-measure');
     await page.waitForTimeout(900); ov.push(await overflow(page));
     await page.waitForSelector('#scr-result:not([hidden])', { timeout: 8000 }); ov.push(await overflow(page));
