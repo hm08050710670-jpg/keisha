@@ -34,8 +34,6 @@
   --font-display: "Barlow Condensed", "Arial Narrow", "Hiragino Sans", "Noto Sans CJK JP", sans-serif;
   --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic", Meiryo, sans-serif;
   --gutter: 18px;
-  --rw: 100vw; /* 横画面として使える幅・高さ（JS が実寸を入れる） */
-  --rh: 100vh;
 }
 
 html { height: 100%; box-sizing: border-box; }
@@ -67,7 +65,9 @@ svg text { font-family: var(--font-body); }
 :focus-visible { outline: 3px solid var(--volt); outline-offset: 3px; border-radius: 6px; }
 
 #app { min-height: 100%; max-width: 480px; margin: 0 auto; padding-inline: var(--gutter); display: flex; flex-direction: column; }
-#root { min-height: 100%; }
+/* 縦画面では .col は箱として扱わず、中身をそのまま縦に並べる */
+.col { display: contents; }
+.only-landscape { display: none !important; }
 
 .screen {
   flex: 1 0 auto;
@@ -344,7 +344,7 @@ input[type="range"] { width: 100%; height: 34px; margin: 0; accent-color: var(--
 /* =====================================================================
    横画面（本来の使い方）。スマホを横に持つ前提で、2列に並べる。
    ===================================================================== */
-@media all {
+@media (orientation: landscape) and (min-width: 560px) {
   :root { --gutter: 22px; }
   .only-landscape { display: block !important; }
   .only-portrait { display: none !important; }
@@ -362,7 +362,7 @@ input[type="range"] { width: 100%; height: 34px; margin: 0; accent-color: var(--
   .col .cta { margin-top: auto; }
   .h-big { font-size: clamp(22px, 3.3vw, 30px); }
   .illust { margin-inline: 0; }
-  .illust svg { max-height: min(calc(var(--rh) * .62), 320px); margin: 0 auto; width: auto; max-width: 100%; }
+  .illust svg { max-height: min(62vh, 320px); margin: 0 auto; width: auto; max-width: 100%; }
   .steps { gap: 6px; }
   .steps li { padding: 8px 12px; font-size: 14px; }
   .ms-read b { font-size: 19px; }
@@ -377,7 +377,7 @@ input[type="range"] { width: 100%; height: 34px; margin: 0; accent-color: var(--
   .ar-line { grid-area: line; } .ar-stroke { grid-area: stroke; align-self: start; }
   .ar-metro { grid-area: metro; } .ar-foot { grid-area: foot; }
   .ar-line .green { max-width: 440px; }
-  .ar-line .green svg { max-height: calc(var(--rh) * .66); width: auto; max-width: 100%; margin: 0 auto; }
+  .ar-line .green svg { max-height: 66vh; width: auto; max-width: 100%; margin: 0 auto; }
   .ar-metro {
     display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas: "h h" "stage beats" "stage phases" "stage btn" "note note";
@@ -401,29 +401,21 @@ input[type="range"] { width: 100%; height: 34px; margin: 0; accent-color: var(--
   #sheet-manual .col.b .btn-volt { margin-top: 4px; }
 }
 
-/* =====================================================================
-   スマホを縦に持っている（または向きをロックしている）ときは、
-   画面全体を90°回して、常に横画面として表示する。
-   ===================================================================== */
-:root.rot, :root.rot body { overflow: hidden; height: 100%; }
-:root.rot body::before { display: none; }
-:root.rot #root {
-  position: fixed; top: 0; left: 0;
-  width: var(--rw); height: var(--rh); min-height: 0;
-  transform-origin: 0 0; transform: rotate(90deg) translateY(-100%);
-  overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
-  background: var(--turf-900);
-  /* 回すと、物理的な上（切り欠き）が画面の左、下（ホームバー）が右になる */
-  padding-left: env(safe-area-inset-top, 0px); padding-right: env(safe-area-inset-bottom, 0px);
+/* 縦持ちのときの案内 */
+.rotate {
+  position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
+  background: var(--turf-900); color: var(--chalk); text-align: center;
+  padding: calc(env(safe-area-inset-top, 0px) + 24px) 28px calc(env(safe-area-inset-bottom, 0px) + 24px);
 }
-:root.rot .sheet {
-  padding-top: 14px; padding-bottom: 24px;
-  padding-left: env(safe-area-inset-top, 0px); padding-right: env(safe-area-inset-bottom, 0px);
-}
-:root.rot .toast { bottom: 22px; }
+.rotate-in { display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 340px; }
+.rotate-ico { width: 150px; height: auto; color: var(--chalk-dim); animation: tilt 2.4s ease-in-out infinite; }
+@keyframes tilt { 0%, 20% { transform: rotate(0); } 50%, 70% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
+.rotate h2 { font-size: 21px; font-weight: 900; line-height: 1.35; }
+.rotate p { font-size: 13.5px; color: var(--chalk-dim); line-height: 1.6; }
+.rotate .btn-text { margin-top: 6px; }
+@media (prefers-reduced-motion: reduce) { .rotate-ico { animation: none; transform: rotate(-90deg); } }
 </style>
 
-<div id="root">
 <div id="app">
 
   <!-- STEP 1: スタート -->
@@ -457,14 +449,15 @@ input[type="range"] { width: 100%; height: 34px; margin: 0; accent-color: var(--
         <div><span>左右</span><b id="ms-side">—</b></div>
       </div>
       <div class="ms-progress" role="progressbar" aria-label="測定の進み具合" aria-valuemin="0" aria-valuemax="100" id="ms-prog"><i id="ms-bar"></i></div>
-    </div>
-    <div class="col b">
-      <div class="illust only-landscape" id="ms-illust-l" aria-hidden="true"></div>
-      <div class="cta">
+      <div class="cta only-portrait">
         <button class="btn-volt" id="ms-next" type="button" hidden>置き直したら次へ <span class="arr" aria-hidden="true">→</span></button>
         <button class="btn-ghost" id="ms-manual" type="button" hidden>手動で入力する</button>
         <button class="btn-ghost" id="ms-cancel" type="button">中止する</button>
       </div>
+    </div>
+    <div class="col b">
+      <div class="illust only-landscape" id="ms-illust-l" aria-hidden="true"></div>
+      <div class="cta only-landscape" id="ms-cta-l"></div>
     </div>
   </section>
 
@@ -647,8 +640,23 @@ input[type="range"] { width: 100%; height: 34px; margin: 0; accent-color: var(--
     </div>
   </div>
 </div>
-<div class="toast" id="toast" role="status" hidden></div>
+
+<!-- 縦持ちのときの案内 -->
+<div class="rotate" id="rotate" hidden role="dialog" aria-labelledby="rt-title">
+  <div class="rotate-in">
+    <svg viewBox="0 0 120 90" aria-hidden="true" class="rotate-ico">
+      <rect x="10" y="12" width="36" height="66" rx="7" fill="none" stroke="currentColor" stroke-width="3" opacity=".45"/>
+      <rect x="52" y="28" width="60" height="36" rx="7" fill="none" stroke="#e4ff1a" stroke-width="3"/>
+      <path d="M26 6c20-6 42 2 50 20" fill="none" stroke="#e4ff1a" stroke-width="3" stroke-linecap="round"/>
+      <path d="M70 18l7 9-11 2z" fill="#e4ff1a"/>
+    </svg>
+    <h2 id="rt-title">スマホを横向きにしてください</h2>
+    <p>このアプリは横画面で使う設計です。画面が回らないときは、コントロールセンターで画面の向きのロックを解除してください。</p>
+    <button class="btn-text" id="rt-skip" type="button">縦のまま使う</button>
+  </div>
 </div>
+
+<div class="toast" id="toast" role="status" hidden></div>
 
 <script>
 /* GOLF GUTS PUTT LAB — 計算ロジック（画面とは独立。Node でも単体テストできる）
@@ -1037,7 +1045,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = MetroSound
     SCREENS.forEach(function (s) { $(s).hidden = s !== id; });
     if (id !== 'scr-main') Metro.stop();
     $('toast').hidden = true;
-    window.scrollTo(0, 0); $('root').scrollTop = 0;
+    window.scrollTo(0, 0);
   }
   var toastTimer = null;
   function toast(msg) {
@@ -1773,18 +1781,25 @@ if (typeof module !== 'undefined' && module.exports) module.exports = MetroSound
     state.orient = v; store.set('orient', v); renderOrient();
   }
 
-  /* 常に横画面として表示する。縦に持っている（向きをロックしている）ときは画面全体を90°回す */
-  function fitScreen() {
-    var w = window.innerWidth, h = window.innerHeight, rot = h > w, root = document.documentElement;
-    root.classList.toggle('rot', rot);
-    root.style.setProperty('--rw', (rot ? h : w) + 'px');
-    root.style.setProperty('--rh', (rot ? w : h) + 'px');
+  /* 横画面では測定画面のボタンを右の列に置く（同じ要素を移動するだけ） */
+  var landscapeMQ = window.matchMedia('(orientation: landscape) and (min-width: 560px)');
+  function placeMeasureButtons() {
+    var target = landscapeMQ.matches ? $('ms-cta-l') : $('scr-measure').querySelector('.col.a .cta');
+    ['ms-next', 'ms-manual', 'ms-cancel'].forEach(function (id) { if ($(id).parentNode !== target) target.appendChild($(id)); });
+  }
+
+  /* 縦持ちのときの案内 */
+  function updateRotate() {
+    var portrait = !landscapeMQ.matches && window.innerHeight > window.innerWidth;
+    $('rotate').hidden = !(portrait && !store.get('portraitOK', false));
+    placeMeasureButtons();
   }
 
   function init() {
-    window.addEventListener('resize', fitScreen);
-    window.addEventListener('orientationchange', function () { setTimeout(fitScreen, 60); });
-    fitScreen();
+    $('rt-skip').addEventListener('click', function () { store.set('portraitOK', true); updateRotate(); });
+    if (landscapeMQ.addEventListener) landscapeMQ.addEventListener('change', updateRotate); else landscapeMQ.addListener(updateRotate);
+    window.addEventListener('resize', updateRotate);
+    updateRotate();
     $('orient-chips').innerHTML = Object.keys(ORIENTS).map(function (k) { return '<button class="chip" type="button" data-v="' + k + '" aria-pressed="false">' + ORIENTS[k].name.replace('・', '<small>') + '</small></button>'; }).join('');
     $('orient-chips').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) setOrient(b.dataset.v); });
     renderOrient();

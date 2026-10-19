@@ -78,7 +78,7 @@
     SCREENS.forEach(function (s) { $(s).hidden = s !== id; });
     if (id !== 'scr-main') Metro.stop();
     $('toast').hidden = true;
-    window.scrollTo(0, 0); $('root').scrollTop = 0;
+    window.scrollTo(0, 0);
   }
   var toastTimer = null;
   function toast(msg) {
@@ -814,18 +814,25 @@
     state.orient = v; store.set('orient', v); renderOrient();
   }
 
-  /* 常に横画面として表示する。縦に持っている（向きをロックしている）ときは画面全体を90°回す */
-  function fitScreen() {
-    var w = window.innerWidth, h = window.innerHeight, rot = h > w, root = document.documentElement;
-    root.classList.toggle('rot', rot);
-    root.style.setProperty('--rw', (rot ? h : w) + 'px');
-    root.style.setProperty('--rh', (rot ? w : h) + 'px');
+  /* 横画面では測定画面のボタンを右の列に置く（同じ要素を移動するだけ） */
+  var landscapeMQ = window.matchMedia('(orientation: landscape) and (min-width: 560px)');
+  function placeMeasureButtons() {
+    var target = landscapeMQ.matches ? $('ms-cta-l') : $('scr-measure').querySelector('.col.a .cta');
+    ['ms-next', 'ms-manual', 'ms-cancel'].forEach(function (id) { if ($(id).parentNode !== target) target.appendChild($(id)); });
+  }
+
+  /* 縦持ちのときの案内 */
+  function updateRotate() {
+    var portrait = !landscapeMQ.matches && window.innerHeight > window.innerWidth;
+    $('rotate').hidden = !(portrait && !store.get('portraitOK', false));
+    placeMeasureButtons();
   }
 
   function init() {
-    window.addEventListener('resize', fitScreen);
-    window.addEventListener('orientationchange', function () { setTimeout(fitScreen, 60); });
-    fitScreen();
+    $('rt-skip').addEventListener('click', function () { store.set('portraitOK', true); updateRotate(); });
+    if (landscapeMQ.addEventListener) landscapeMQ.addEventListener('change', updateRotate); else landscapeMQ.addListener(updateRotate);
+    window.addEventListener('resize', updateRotate);
+    updateRotate();
     $('orient-chips').innerHTML = Object.keys(ORIENTS).map(function (k) { return '<button class="chip" type="button" data-v="' + k + '" aria-pressed="false">' + ORIENTS[k].name.replace('・', '<small>') + '</small></button>'; }).join('');
     $('orient-chips').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) setOrient(b.dataset.v); });
     renderOrient();
