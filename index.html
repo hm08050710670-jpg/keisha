@@ -65,6 +65,9 @@ svg text { font-family: var(--font-body); }
 :focus-visible { outline: 3px solid var(--volt); outline-offset: 3px; border-radius: 6px; }
 
 #app { min-height: 100%; max-width: 480px; margin: 0 auto; padding-inline: var(--gutter); display: flex; flex-direction: column; }
+/* 縦画面では .col は箱として扱わず、中身をそのまま縦に並べる */
+.col { display: contents; }
+.only-landscape { display: none !important; }
 
 .screen {
   flex: 1 0 auto;
@@ -336,76 +339,167 @@ input[type="range"] { width: 100%; height: 34px; margin: 0; accent-color: var(--
   .pulse, .dots::after { animation: none; }
   .btn-volt, .ms-progress i, .metro-stage { transition: none; }
 }
+
+
+/* =====================================================================
+   横画面（本来の使い方）。スマホを横に持つ前提で、2列に並べる。
+   ===================================================================== */
+@media (orientation: landscape) and (min-width: 560px) {
+  :root { --gutter: 22px; }
+  .only-landscape { display: block !important; }
+  .only-portrait { display: none !important; }
+  #app {
+    max-width: 1060px;
+    padding-inline: max(var(--gutter), env(safe-area-inset-left, 0px)) max(var(--gutter), env(safe-area-inset-right, 0px));
+  }
+  .screen {
+    display: grid; grid-template-columns: minmax(0, 11fr) minmax(0, 10fr);
+    column-gap: clamp(20px, 3.5vw, 40px); row-gap: 12px; align-content: start;
+    padding-block: 14px 18px;
+  }
+  .col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .col.a { grid-column: 1; } .col.b { grid-column: 2; }
+  .col .cta { margin-top: auto; }
+  .h-big { font-size: clamp(22px, 3.3vw, 30px); }
+  .illust { margin-inline: 0; }
+  .illust svg { max-height: min(62vh, 320px); margin: 0 auto; width: auto; max-width: 100%; }
+  .steps { gap: 6px; }
+  .steps li { padding: 8px 12px; font-size: 14px; }
+  .ms-read b { font-size: 19px; }
+
+  /* メイン: 左に距離と振り幅、右にライン図と結果、下にメトロノーム */
+  #scr-main {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: "top top" "slope slope" "dist line" "stroke line" "metro metro" "foot foot";
+    gap: 12px clamp(20px, 3.5vw, 40px);
+  }
+  .ar-top { grid-area: top; } .ar-slope { grid-area: slope; } .ar-dist { grid-area: dist; }
+  .ar-line { grid-area: line; } .ar-stroke { grid-area: stroke; align-self: start; }
+  .ar-metro { grid-area: metro; } .ar-foot { grid-area: foot; }
+  .ar-line .green { max-width: 440px; }
+  .ar-line .green svg { max-height: 66vh; width: auto; max-width: 100%; margin: 0 auto; }
+  .ar-metro {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: "h h" "stage beats" "stage phases" "stage btn" "note note";
+    column-gap: clamp(20px, 3.5vw, 40px); row-gap: 10px; align-items: start;
+  }
+  .ar-metro > h3 { grid-area: h; }
+  .ar-metro .metro-stage { grid-area: stage; }
+  .ar-metro .beats { grid-area: beats; }
+  .ar-metro .phases { grid-area: phases; }
+  .ar-metro #metro-btn { grid-area: btn; }
+  .ar-metro > .note { grid-area: note; }
+
+  /* シート */
+  .sheet-in {
+    max-width: 1060px;
+    padding-inline: max(var(--gutter), env(safe-area-inset-left, 0px)) max(var(--gutter), env(safe-area-inset-right, 0px));
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: clamp(20px, 3.5vw, 40px); row-gap: 14px; align-items: start;
+  }
+  .sheet-head { grid-column: 1 / -1; }
+  .sheet .col { gap: 14px; }
+  #sheet-manual .col.b .btn-volt { margin-top: 4px; }
+}
+
+/* 縦持ちのときの案内 */
+.rotate {
+  position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
+  background: var(--turf-900); color: var(--chalk); text-align: center;
+  padding: calc(env(safe-area-inset-top, 0px) + 24px) 28px calc(env(safe-area-inset-bottom, 0px) + 24px);
+}
+.rotate-in { display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 340px; }
+.rotate-ico { width: 150px; height: auto; color: var(--chalk-dim); animation: tilt 2.4s ease-in-out infinite; }
+@keyframes tilt { 0%, 20% { transform: rotate(0); } 50%, 70% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
+.rotate h2 { font-size: 21px; font-weight: 900; line-height: 1.35; }
+.rotate p { font-size: 13.5px; color: var(--chalk-dim); line-height: 1.6; }
+.rotate .btn-text { margin-top: 6px; }
+@media (prefers-reduced-motion: reduce) { .rotate-ico { animation: none; transform: rotate(-90deg); } }
 </style>
 
 <div id="app">
 
   <!-- STEP 1: スタート -->
   <section class="screen" id="scr-start">
-    <header class="brand">GOLF GUTS <b>PUTT LAB</b></header>
-    <h1 class="h-big">まずはスマホで<br>グリーンの傾斜を<br>測定しましょう！</h1>
-    <p class="lead">スマホをグリーンに置くだけで、上り・下り・左右の傾斜をチェックできます。</p>
-    <div class="illust" id="start-illust" role="img" aria-label="グリーンの上に横向きに置いたスマホ。長い辺がカップを向いている"></div>
-    <ol class="steps" id="start-steps"></ol>
-    <div class="cta">
-      <button class="btn-volt" id="btn-measure" type="button">傾斜を測定する <span class="arr" aria-hidden="true">→</span></button>
-      <button class="btn-text" id="btn-manual" type="button">センサーを使わず手動で入力する</button>
+    <div class="col a">
+      <header class="brand">GOLF GUTS <b>PUTT LAB</b></header>
+      <h1 class="h-big">まずはスマホで<br>グリーンの傾斜を<br>測定しましょう！</h1>
+      <p class="lead">スマホをグリーンに置くだけで、上り・下り・左右の傾斜をチェックできます。</p>
+      <div class="illust only-portrait" id="start-illust" role="img" aria-label="グリーンの上に横向きに置いたスマホ。長い辺がカップを向いている"></div>
+      <ol class="steps" id="start-steps"></ol>
+    </div>
+    <div class="col b">
+      <div class="illust only-landscape" id="start-illust-l" aria-hidden="true"></div>
+      <div class="cta">
+        <button class="btn-volt" id="btn-measure" type="button">傾斜を測定する <span class="arr" aria-hidden="true">→</span></button>
+        <button class="btn-text" id="btn-manual" type="button">センサーを使わず手動で入力する</button>
+      </div>
     </div>
   </section>
 
   <!-- STEP 2: 測定中 -->
   <section class="screen" id="scr-measure" hidden>
-    <header class="brand">GOLF GUTS <b>PUTT LAB</b></header>
-    <p class="eyebrow" id="ms-mode">傾斜を測定</p>
-    <h2 class="h-big" id="ms-title" aria-live="polite">測定中<span class="dots"></span></h2>
-    <p class="lead" id="ms-hint" aria-live="polite">スマホを横にして、グリーンに置いて手を離してください。</p>
-    <div class="illust" id="ms-illust" aria-hidden="true"></div>
-    <div class="ms-read">
-      <div><span>前後</span><b id="ms-fwd">—</b></div>
-      <div><span>左右</span><b id="ms-side">—</b></div>
+    <div class="col a">
+      <header class="brand">GOLF GUTS <b>PUTT LAB</b></header>
+      <p class="eyebrow" id="ms-mode">傾斜を測定</p>
+      <h2 class="h-big" id="ms-title" aria-live="polite">測定中<span class="dots"></span></h2>
+      <p class="lead" id="ms-hint" aria-live="polite">スマホを横にして、グリーンに置いて手を離してください。</p>
+      <div class="illust only-portrait" id="ms-illust" aria-hidden="true"></div>
+      <div class="ms-read">
+        <div><span>前後</span><b id="ms-fwd">—</b></div>
+        <div><span>左右</span><b id="ms-side">—</b></div>
+      </div>
+      <div class="ms-progress" role="progressbar" aria-label="測定の進み具合" aria-valuemin="0" aria-valuemax="100" id="ms-prog"><i id="ms-bar"></i></div>
+      <div class="cta only-portrait">
+        <button class="btn-volt" id="ms-next" type="button" hidden>置き直したら次へ <span class="arr" aria-hidden="true">→</span></button>
+        <button class="btn-ghost" id="ms-manual" type="button" hidden>手動で入力する</button>
+        <button class="btn-ghost" id="ms-cancel" type="button">中止する</button>
+      </div>
     </div>
-    <div class="ms-progress" role="progressbar" aria-label="測定の進み具合" aria-valuemin="0" aria-valuemax="100" id="ms-prog"><i id="ms-bar"></i></div>
-    <div class="cta">
-      <button class="btn-volt" id="ms-next" type="button" hidden>置き直したら次へ <span class="arr" aria-hidden="true">→</span></button>
-      <button class="btn-ghost" id="ms-manual" type="button" hidden>手動で入力する</button>
-      <button class="btn-ghost" id="ms-cancel" type="button">中止する</button>
+    <div class="col b">
+      <div class="illust only-landscape" id="ms-illust-l" aria-hidden="true"></div>
+      <div class="cta only-landscape" id="ms-cta-l"></div>
     </div>
   </section>
 
   <!-- STEP 3: 測定完了 -->
   <section class="screen" id="scr-result" hidden>
-    <header class="brand">GOLF GUTS <b>PUTT LAB</b></header>
-    <p class="eyebrow" id="rs-eyebrow">測定完了！</p>
-    <h2 class="h-big" id="rs-title">傾斜の測定が<br>完了しました！</h2>
-    <div class="illust" id="rs-illust" role="img"></div>
-    <dl class="slope-table">
-      <div><dt>前後傾斜</dt><dd id="rs-fwd"></dd></div>
-      <div><dt>左右傾斜</dt><dd id="rs-side"></dd></div>
-      <div><dt>傾斜強度</dt><dd id="rs-strength"></dd></div>
-    </dl>
-    <p class="note">測定した地点の傾斜がカップまで続くと仮定して計算します。途中で傾斜が変わるラインでは、結果は目安としてお使いください。</p>
-    <div class="cta">
-      <button class="btn-volt" id="rs-go" type="button">パッティングラインを計算する <span class="arr" aria-hidden="true">→</span></button>
-      <button class="btn-ghost" id="rs-redo" type="button">再測定する</button>
+    <div class="col a">
+      <header class="brand">GOLF GUTS <b>PUTT LAB</b></header>
+      <p class="eyebrow" id="rs-eyebrow">測定完了！</p>
+      <h2 class="h-big" id="rs-title">傾斜の測定が<br>完了しました！</h2>
+      <div class="illust only-portrait" id="rs-illust" role="img"></div>
+      <dl class="slope-table">
+        <div><dt>前後傾斜</dt><dd id="rs-fwd"></dd></div>
+        <div><dt>左右傾斜</dt><dd id="rs-side"></dd></div>
+        <div><dt>傾斜強度</dt><dd id="rs-strength"></dd></div>
+      </dl>
+      <p class="note">測定した地点の傾斜がカップまで続くと仮定して計算します。途中で傾斜が変わるラインでは、結果は目安としてお使いください。</p>
+    </div>
+    <div class="col b">
+      <div class="illust only-landscape" id="rs-illust-l" aria-hidden="true"></div>
+      <div class="cta">
+        <button class="btn-volt" id="rs-go" type="button">パッティングラインを計算する <span class="arr" aria-hidden="true">→</span></button>
+        <button class="btn-ghost" id="rs-redo" type="button">再測定する</button>
+      </div>
     </div>
   </section>
 
   <!-- STEP 4–6: メイン -->
   <section class="screen" id="scr-main" hidden>
-    <div class="topbar">
+    <div class="topbar ar-top">
       <header class="brand">GOLF GUTS <b>PUTT LAB</b></header>
       <button class="icon-btn" id="mn-settings" type="button" aria-label="設定を開く">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2.2"/><circle cx="8" cy="17" r="2.2"/></svg>
       </button>
     </div>
 
-    <div class="slopebar">
+    <div class="slopebar ar-slope">
       <span class="lbl" id="mn-src">測定した傾斜</span>
       <span class="val" id="mn-fwd"></span><span class="sep" aria-hidden="true"></span><span class="val" id="mn-side"></span>
       <button id="mn-remeasure" type="button">再測定</button>
     </div>
 
-    <section class="block" aria-labelledby="h-dist">
+    <section class="block ar-dist" aria-labelledby="h-dist">
       <h3 id="h-dist">カップまでの距離<span id="dist-m"></span></h3>
       <div class="dist-row">
         <button class="step-btn" id="dist-minus" type="button" aria-label="0.5ヤード短く">−</button>
@@ -419,7 +513,7 @@ input[type="range"] { width: 100%; height: 34px; margin: 0; accent-color: var(--
       <div class="chips" id="dist-chips" role="group" aria-label="よく使う距離"></div>
     </section>
 
-    <section class="block" aria-labelledby="h-line">
+    <section class="block ar-line" aria-labelledby="h-line">
       <h3 id="h-line">パッティングライン</h3>
       <div class="green" id="line-view" role="img"></div>
       <div class="legend">
@@ -430,7 +524,7 @@ input[type="range"] { width: 100%; height: 34px; margin: 0; accent-color: var(--
       <div id="call" aria-live="polite"></div>
     </section>
 
-    <section class="block" aria-labelledby="h-stroke" id="stroke-block">
+    <section class="block ar-stroke" aria-labelledby="h-stroke" id="stroke-block">
       <h3 id="h-stroke">必要な振り幅<span>アドレス → トップ</span></h3>
       <div class="stroke-num">
         <b id="st-cm">–</b><span class="unit">cm</span>
@@ -440,7 +534,7 @@ input[type="range"] { width: 100%; height: 34px; margin: 0; accent-color: var(--
       <p class="note" id="st-note"></p>
     </section>
 
-    <section class="block" aria-labelledby="h-metro">
+    <section class="block ar-metro" aria-labelledby="h-metro">
       <h3 id="h-metro">メトロノーム<span>90 BPM・3/4</span></h3>
       <div class="metro-stage" id="metro-stage" aria-hidden="true"></div>
       <div class="beats" id="beats" aria-hidden="true"><span>1</span><span>2</span><span>3</span></div>
@@ -454,7 +548,7 @@ input[type="range"] { width: 100%; height: 34px; margin: 0; accent-color: var(--
       <p class="note">1拍目で引き始め、2拍目でトップ、2拍目と3拍目のちょうど真ん中で打ちます。音が出ないときは、スマホの消音モードと音量を確認してください。</p>
     </section>
 
-    <p class="note foot">表示はすべて推定値です。測定地点の傾斜がカップまで一定という前提で計算しており、芝目・途中の起伏・スマホケースやカメラの出っ張りによる誤差は含まれません。</p>
+    <p class="note foot ar-foot">表示はすべて推定値です。測定地点の傾斜がカップまで一定という前提で計算しており、芝目・途中の起伏・スマホケースやカメラの出っ張りによる誤差は含まれません。</p>
   </section>
 </div>
 
@@ -465,19 +559,24 @@ input[type="range"] { width: 100%; height: 34px; margin: 0; accent-color: var(--
       <h2 id="mi-title">傾斜を手動で入力</h2>
       <button class="icon-btn" id="mi-close" type="button" aria-label="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
-    <p id="mi-msg">カップに向かって立ったときの傾斜を入力します。</p>
-    <div class="illust" id="mi-illust" aria-hidden="true"></div>
-    <div>
-      <div class="field-head"><label for="mi-fwd">前後の傾斜</label><output id="mi-fwd-out" for="mi-fwd"></output></div>
-      <input id="mi-fwd" type="range" min="-4" max="4" step="0.1" value="0">
-      <div class="range-ends"><span>下り 4°</span><span>平坦</span><span>上り 4°</span></div>
+    <div class="col a">
+      <p id="mi-msg">カップに向かって立ったときの傾斜を入力します。</p>
+      <div class="illust only-portrait" id="mi-illust" aria-hidden="true"></div>
+      <div>
+        <div class="field-head"><label for="mi-fwd">前後の傾斜</label><output id="mi-fwd-out" for="mi-fwd"></output></div>
+        <input id="mi-fwd" type="range" min="-4" max="4" step="0.1" value="0">
+        <div class="range-ends"><span>下り 4°</span><span>平坦</span><span>上り 4°</span></div>
+      </div>
+      <div>
+        <div class="field-head"><label for="mi-side">左右の傾斜</label><output id="mi-side-out" for="mi-side"></output></div>
+        <input id="mi-side" type="range" min="-4" max="4" step="0.1" value="0">
+        <div class="range-ends"><span>左下がり 4°</span><span>平坦</span><span>右下がり 4°</span></div>
+      </div>
     </div>
-    <div>
-      <div class="field-head"><label for="mi-side">左右の傾斜</label><output id="mi-side-out" for="mi-side"></output></div>
-      <input id="mi-side" type="range" min="-4" max="4" step="0.1" value="0">
-      <div class="range-ends"><span>左下がり 4°</span><span>平坦</span><span>右下がり 4°</span></div>
+    <div class="col b">
+      <div class="illust only-landscape" id="mi-illust-l" aria-hidden="true"></div>
+      <button class="btn-volt" id="mi-ok" type="button">この傾斜で進む <span class="arr" aria-hidden="true">→</span></button>
     </div>
-    <button class="btn-volt" id="mi-ok" type="button">この傾斜で進む <span class="arr" aria-hidden="true">→</span></button>
   </div>
 </div>
 
@@ -489,6 +588,7 @@ input[type="range"] { width: 100%; height: 34px; margin: 0; accent-color: var(--
       <button class="icon-btn" id="set-close" type="button" aria-label="設定を閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
 
+    <div class="col a">
     <section class="block">
       <h3 class="sec">グリーンの速さ</h3>
       <p>スティンプメーターの値（ft）です。コースの掲示があればその数字に合わせてください。速いほど、よく曲がり、振り幅は小さくなります。</p>
@@ -515,7 +615,8 @@ input[type="range"] { width: 100%; height: 34px; margin: 0; accent-color: var(--
         <button class="btn-ghost pri" id="cal-save" type="button">保存する</button>
       </div>
     </section>
-
+    </div>
+    <div class="col b">
     <section class="block">
       <h3 class="sec">スマホの置き方</h3>
       <p>測定するときのスマホの向きです。スタート画面の図と手順も、この設定に合わせて変わります。</p>
@@ -536,6 +637,22 @@ input[type="range"] { width: 100%; height: 34px; margin: 0; accent-color: var(--
       <h3 class="sec">傾斜の入力</h3>
       <button class="btn-ghost" id="set-manual" type="button">傾斜を手動で入力する</button>
     </section>
+    </div>
+  </div>
+</div>
+
+<!-- 縦持ちのときの案内 -->
+<div class="rotate" id="rotate" hidden role="dialog" aria-labelledby="rt-title">
+  <div class="rotate-in">
+    <svg viewBox="0 0 120 90" aria-hidden="true" class="rotate-ico">
+      <rect x="10" y="12" width="36" height="66" rx="7" fill="none" stroke="currentColor" stroke-width="3" opacity=".45"/>
+      <rect x="52" y="28" width="60" height="36" rx="7" fill="none" stroke="#e4ff1a" stroke-width="3"/>
+      <path d="M26 6c20-6 42 2 50 20" fill="none" stroke="#e4ff1a" stroke-width="3" stroke-linecap="round"/>
+      <path d="M70 18l7 9-11 2z" fill="#e4ff1a"/>
+    </svg>
+    <h2 id="rt-title">スマホを横向きにしてください</h2>
+    <p>このアプリは横画面で使う設計です。画面が回らないときは、コントロールセンターで画面の向きのロックを解除してください。</p>
+    <button class="btn-text" id="rt-skip" type="button">縦のまま使う</button>
   </div>
 </div>
 
@@ -854,6 +971,11 @@ if (typeof module !== 'undefined' && module.exports) module.exports = MetroSound
 
   var P = PuttPhysics, YD = P.YD, DEG = Math.PI / 180;
   var $ = function (id) { return document.getElementById(id); };
+  /** 図は縦画面用と横画面用の2か所に同じものを描く（表示されるのは片方だけ） */
+  function setIllust(id, html) {
+    $(id).innerHTML = html;
+    var l = $(id + '-l'); if (l) l.innerHTML = html.replace(/id="([a-z]+)g"/, 'id="$1lg"').replace(/url\(#([a-z]+)g\)/, 'url(#$1lg)');
+  }
   var C = {
     chalk: '#f3f7ee', dim: '#abc3b1', faint: '#7a9a85', volt: '#e4ff1a', ink: '#131f06', pin: '#ff5b3a',
     t950: '#05150d', t900: '#0a2417', t800: '#0f3321', t700: '#16442d', t600: '#21603f', t500: '#2f7d52'
@@ -1109,7 +1231,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = MetroSound
     $('ms-hint').dataset.place = (state.orient === 'P' ? 'スマホの上側をカップに向けて' : 'スマホを横にして、' + orient().edge + 'をカップに向けて') + 'グリーンに置き、手を離してください。';
     $('ms-fwd').textContent = '—'; $('ms-side').textContent = '—';
     setProgress(0);
-    $('ms-illust').innerHTML = plateSVG({ id: 'ms', phone: true, pulse: true, fixed: true });
+    setIllust('ms-illust', plateSVG({ id: 'ms', phone: true, pulse: true, fixed: true }));
     show('scr-measure');
     Sensor.enable().then(function (res) {
       if ($('scr-measure').hidden) return;
@@ -1155,7 +1277,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = MetroSound
       $('ms-fwd').textContent = fwdText(ema.f); $('ms-side').textContent = sideText(ema.s);
       if (now - lastDraw > 180) {
         lastDraw = now;
-        $('ms-illust').innerHTML = plateSVG({ id: 'ms', fwd: clamp(ema.f, -8, 8), side: clamp(ema.s, -8, 8), phone: true, pulse: true, fixed: true });
+        setIllust('ms-illust', plateSVG({ id: 'ms', fwd: clamp(ema.f, -8, 8), side: clamp(ema.s, -8, 8), phone: true, pulse: true, fixed: true }));
       }
 
       var flat = cur.faceUp && Math.abs(f) < MAX_TILT && Math.abs(s) < MAX_TILT;
@@ -1226,7 +1348,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = MetroSound
     var tot = totalSlope(state.slope);
     $('rs-eyebrow').textContent = source === 'sensor' ? '測定完了！' : '手動入力';
     $('rs-title').innerHTML = source === 'sensor' ? '傾斜の測定が<br>完了しました！' : '傾斜を<br>設定しました';
-    $('rs-illust').innerHTML = plateSVG({ id: 'rs', fwd: fwd, side: side, arrow: true });
+    setIllust('rs-illust', plateSVG({ id: 'rs', fwd: fwd, side: side, arrow: true }));
     $('rs-illust').setAttribute('aria-label', 'グリーンの傾き：前後は' + fwdText(fwd) + '、左右は' + sideText(side));
     $('rs-fwd').innerHTML = fwdText(fwd) + (Math.abs(fwd) >= FLAT ? '<small>勾配 ' + pct(fwd) + '</small>' : '');
     $('rs-side').innerHTML = sideText(side) + (Math.abs(side) >= FLAT ? '<small>勾配 ' + pct(side) + '</small>' : '');
@@ -1247,7 +1369,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = MetroSound
   function renderManual() {
     var f = +$('mi-fwd').value, s = +$('mi-side').value;
     $('mi-fwd-out').textContent = fwdText(f); $('mi-side-out').textContent = sideText(s);
-    $('mi-illust').innerHTML = plateSVG({ id: 'mi', fwd: f, side: s, arrow: true });
+    setIllust('mi-illust', plateSVG({ id: 'mi', fwd: f, side: s, arrow: true }));
   }
 
   /* =====================================================================
@@ -1650,7 +1772,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = MetroSound
      起動
      ===================================================================== */
   function renderOrient() {
-    $('start-illust').innerHTML = plateSVG({ id: 'st', phone: true, labels: true });
+    setIllust('start-illust', plateSVG({ id: 'st', phone: true, labels: true }));
     $('start-steps').innerHTML = orient().steps.map(function (t, i) { return '<li><span class="n">' + (i + 1) + '</span>' + t + '</li>'; }).join('');
     Array.prototype.forEach.call($('orient-chips').children, function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === state.orient)); });
   }
@@ -1659,7 +1781,25 @@ if (typeof module !== 'undefined' && module.exports) module.exports = MetroSound
     state.orient = v; store.set('orient', v); renderOrient();
   }
 
+  /* 横画面では測定画面のボタンを右の列に置く（同じ要素を移動するだけ） */
+  var landscapeMQ = window.matchMedia('(orientation: landscape) and (min-width: 560px)');
+  function placeMeasureButtons() {
+    var target = landscapeMQ.matches ? $('ms-cta-l') : $('scr-measure').querySelector('.col.a .cta');
+    ['ms-next', 'ms-manual', 'ms-cancel'].forEach(function (id) { if ($(id).parentNode !== target) target.appendChild($(id)); });
+  }
+
+  /* 縦持ちのときの案内 */
+  function updateRotate() {
+    var portrait = !landscapeMQ.matches && window.innerHeight > window.innerWidth;
+    $('rotate').hidden = !(portrait && !store.get('portraitOK', false));
+    placeMeasureButtons();
+  }
+
   function init() {
+    $('rt-skip').addEventListener('click', function () { store.set('portraitOK', true); updateRotate(); });
+    if (landscapeMQ.addEventListener) landscapeMQ.addEventListener('change', updateRotate); else landscapeMQ.addListener(updateRotate);
+    window.addEventListener('resize', updateRotate);
+    updateRotate();
     $('orient-chips').innerHTML = Object.keys(ORIENTS).map(function (k) { return '<button class="chip" type="button" data-v="' + k + '" aria-pressed="false">' + ORIENTS[k].name.replace('・', '<small>') + '</small></button>'; }).join('');
     $('orient-chips').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) setOrient(b.dataset.v); });
     renderOrient();

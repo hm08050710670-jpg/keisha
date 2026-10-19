@@ -39,6 +39,8 @@ async function setRange(page, sel, v) {
     page.on('console', m => { if (m.type() === 'error' && !/fonts\.g|ERR_|Failed to load resource/.test(m.text())) errors.push(m.text()); });
     page.on('pageerror', e => errors.push('pageerror: ' + e.message));
     await page.addInitScript(() => {
+      // 縦画面のテストでは「縦のまま使う」を選んだ状態にしておく
+      try { localStorage.setItem('ggpl.portraitOK', 'true'); } catch (e) {}
       // メトロノームの予約時刻を記録する
       window.__clicks = [];
       const AC = window.AudioContext;
@@ -322,8 +324,35 @@ async function setRange(page, sel, v) {
   await page.screenshot({ path: shots + '/31-steep-down.png', fullPage: true });
   await page.close();
 
+  // ===== N. 横画面レイアウトと、縦持ちの案内 =====
+  {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    const pg = await ctx.newPage(); await pg.goto(URL); await pg.waitForTimeout(300);
+    check('N1 縦持ちでは案内が出る', await pg.locator('#rotate').isVisible() && /横向きにして/.test(await txt(pg, '#rotate h2')));
+    await pg.click('#rt-skip');
+    check('N2 「縦のまま使う」で消え、以後は出ない', !(await pg.locator('#rotate').isVisible()));
+    await pg.reload(); await pg.waitForTimeout(300);
+    check('N3 再読み込み後も案内は出ない', !(await pg.locator('#rotate').isVisible()));
+    await ctx.close();
+    const ctx2 = await browser.newContext({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true });
+    const lp = await ctx2.newPage(); await lp.goto(URL); await lp.waitForTimeout(300);
+    check('N4 横画面では案内が出ない', !(await lp.locator('#rotate').isVisible()));
+    const box = async (sel) => await lp.locator(sel).boundingBox();
+    const st = await box('#start-steps'), il = await box('#start-illust-l'), bt = await box('#btn-measure');
+    check('N5 スタート: 左に手順、右に図とボタン', st && il && bt && il.x > st.x + st.width - 1 && bt.x > st.x + st.width - 1 && !(await lp.locator('#start-illust').isVisible()), JSON.stringify([st && st.x, il && il.x, bt && bt.x]));
+    await lp.click('#btn-manual'); await lp.click('#mi-ok'); await lp.click('#rs-go'); await lp.waitForTimeout(200);
+    const d = await box('#dist-range'), ln = await box('#line-view'), sk = await box('#stroke-block'), mt = await box('#metro-stage'), bb = await box('#beats');
+    check('N6 メイン: 左に距離と振り幅、右にライン、下にメトロノーム2列', ln.x > d.x + d.width - 1 && Math.abs(sk.x - d.x) < 2 && sk.y > d.y && mt.y > sk.y && bb.x > mt.x + mt.width - 1, JSON.stringify({ d: d.x, ln: ln.x, sk: [sk.x, sk.y], mt: mt.y, bb: bb.x }));
+    const vis = await lp.evaluate(() => { const r = document.querySelector('#line-view').getBoundingClientRect(); return r.bottom <= window.innerHeight + document.documentElement.scrollTop + 2; });
+    check('N7 ライン図は横画面の高さに収まる', (await box('#line-view')).height <= 390 * 0.9, Math.round((await box('#line-view')).height) + 'px');
+    await lp.click('#mn-remeasure'); await lp.waitForTimeout(600);
+    const cb = await box('#ms-cancel'), mi = await box('#ms-illust-l');
+    check('N8 測定: 中止ボタンは右の列', cb && mi && cb.x >= mi.x - 1, JSON.stringify([cb && cb.x, mi && mi.x]));
+    await ctx2.close();
+  }
+
   // ===== J. 画面サイズ違い =====
-  for (const [w, h] of [[320, 568], [360, 740], [430, 932], [768, 1024]]) {
+  for (const [w, h] of [[320, 568], [360, 740], [430, 932], [768, 1024], [667, 375], [844, 390], [932, 430], [1024, 768]]) {
     page = await newPage(w, h);
     const ov = [await overflow(page)];
     const ctaBottom = await page.evaluate(() => document.querySelector('#btn-measure').getBoundingClientRect().bottom);
@@ -352,6 +381,7 @@ async function setRange(page, sel, v) {
   {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
     const host = await ctx.newPage();
+    await host.addInitScript(() => { try { localStorage.setItem('ggpl.portraitOK', 'true'); } catch (e) {} });
     await host.goto('http://127.0.0.1:8765/host.html');
     const fr = host.frameLocator('iframe');
     await fr.locator('#btn-measure').click();

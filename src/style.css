@@ -49,6 +49,9 @@ svg text { font-family: var(--font-body); }
 :focus-visible { outline: 3px solid var(--volt); outline-offset: 3px; border-radius: 6px; }
 
 #app { min-height: 100%; max-width: 480px; margin: 0 auto; padding-inline: var(--gutter); display: flex; flex-direction: column; }
+/* 縦画面では .col は箱として扱わず、中身をそのまま縦に並べる */
+.col { display: contents; }
+.only-landscape { display: none !important; }
 
 .screen {
   flex: 1 0 auto;
@@ -320,3 +323,78 @@ input[type="range"] { width: 100%; height: 34px; margin: 0; accent-color: var(--
   .pulse, .dots::after { animation: none; }
   .btn-volt, .ms-progress i, .metro-stage { transition: none; }
 }
+
+
+/* =====================================================================
+   横画面（本来の使い方）。スマホを横に持つ前提で、2列に並べる。
+   ===================================================================== */
+@media (orientation: landscape) and (min-width: 560px) {
+  :root { --gutter: 22px; }
+  .only-landscape { display: block !important; }
+  .only-portrait { display: none !important; }
+  #app {
+    max-width: 1060px;
+    padding-inline: max(var(--gutter), env(safe-area-inset-left, 0px)) max(var(--gutter), env(safe-area-inset-right, 0px));
+  }
+  .screen {
+    display: grid; grid-template-columns: minmax(0, 11fr) minmax(0, 10fr);
+    column-gap: clamp(20px, 3.5vw, 40px); row-gap: 12px; align-content: start;
+    padding-block: 14px 18px;
+  }
+  .col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .col.a { grid-column: 1; } .col.b { grid-column: 2; }
+  .col .cta { margin-top: auto; }
+  .h-big { font-size: clamp(22px, 3.3vw, 30px); }
+  .illust { margin-inline: 0; }
+  .illust svg { max-height: min(62vh, 320px); margin: 0 auto; width: auto; max-width: 100%; }
+  .steps { gap: 6px; }
+  .steps li { padding: 8px 12px; font-size: 14px; }
+  .ms-read b { font-size: 19px; }
+
+  /* メイン: 左に距離と振り幅、右にライン図と結果、下にメトロノーム */
+  #scr-main {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: "top top" "slope slope" "dist line" "stroke line" "metro metro" "foot foot";
+    gap: 12px clamp(20px, 3.5vw, 40px);
+  }
+  .ar-top { grid-area: top; } .ar-slope { grid-area: slope; } .ar-dist { grid-area: dist; }
+  .ar-line { grid-area: line; } .ar-stroke { grid-area: stroke; align-self: start; }
+  .ar-metro { grid-area: metro; } .ar-foot { grid-area: foot; }
+  .ar-line .green { max-width: 440px; }
+  .ar-line .green svg { max-height: 66vh; width: auto; max-width: 100%; margin: 0 auto; }
+  .ar-metro {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: "h h" "stage beats" "stage phases" "stage btn" "note note";
+    column-gap: clamp(20px, 3.5vw, 40px); row-gap: 10px; align-items: start;
+  }
+  .ar-metro > h3 { grid-area: h; }
+  .ar-metro .metro-stage { grid-area: stage; }
+  .ar-metro .beats { grid-area: beats; }
+  .ar-metro .phases { grid-area: phases; }
+  .ar-metro #metro-btn { grid-area: btn; }
+  .ar-metro > .note { grid-area: note; }
+
+  /* シート */
+  .sheet-in {
+    max-width: 1060px;
+    padding-inline: max(var(--gutter), env(safe-area-inset-left, 0px)) max(var(--gutter), env(safe-area-inset-right, 0px));
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: clamp(20px, 3.5vw, 40px); row-gap: 14px; align-items: start;
+  }
+  .sheet-head { grid-column: 1 / -1; }
+  .sheet .col { gap: 14px; }
+  #sheet-manual .col.b .btn-volt { margin-top: 4px; }
+}
+
+/* 縦持ちのときの案内 */
+.rotate {
+  position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
+  background: var(--turf-900); color: var(--chalk); text-align: center;
+  padding: calc(env(safe-area-inset-top, 0px) + 24px) 28px calc(env(safe-area-inset-bottom, 0px) + 24px);
+}
+.rotate-in { display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 340px; }
+.rotate-ico { width: 150px; height: auto; color: var(--chalk-dim); animation: tilt 2.4s ease-in-out infinite; }
+@keyframes tilt { 0%, 20% { transform: rotate(0); } 50%, 70% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
+.rotate h2 { font-size: 21px; font-weight: 900; line-height: 1.35; }
+.rotate p { font-size: 13.5px; color: var(--chalk-dim); line-height: 1.6; }
+.rotate .btn-text { margin-top: 6px; }
+@media (prefers-reduced-motion: reduce) { .rotate-ico { animation: none; transform: rotate(-90deg); } }

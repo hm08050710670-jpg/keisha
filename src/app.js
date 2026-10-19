@@ -4,6 +4,11 @@
 
   var P = PuttPhysics, YD = P.YD, DEG = Math.PI / 180;
   var $ = function (id) { return document.getElementById(id); };
+  /** 図は縦画面用と横画面用の2か所に同じものを描く（表示されるのは片方だけ） */
+  function setIllust(id, html) {
+    $(id).innerHTML = html;
+    var l = $(id + '-l'); if (l) l.innerHTML = html.replace(/id="([a-z]+)g"/, 'id="$1lg"').replace(/url\(#([a-z]+)g\)/, 'url(#$1lg)');
+  }
   var C = {
     chalk: '#f3f7ee', dim: '#abc3b1', faint: '#7a9a85', volt: '#e4ff1a', ink: '#131f06', pin: '#ff5b3a',
     t950: '#05150d', t900: '#0a2417', t800: '#0f3321', t700: '#16442d', t600: '#21603f', t500: '#2f7d52'
@@ -259,7 +264,7 @@
     $('ms-hint').dataset.place = (state.orient === 'P' ? 'スマホの上側をカップに向けて' : 'スマホを横にして、' + orient().edge + 'をカップに向けて') + 'グリーンに置き、手を離してください。';
     $('ms-fwd').textContent = '—'; $('ms-side').textContent = '—';
     setProgress(0);
-    $('ms-illust').innerHTML = plateSVG({ id: 'ms', phone: true, pulse: true, fixed: true });
+    setIllust('ms-illust', plateSVG({ id: 'ms', phone: true, pulse: true, fixed: true }));
     show('scr-measure');
     Sensor.enable().then(function (res) {
       if ($('scr-measure').hidden) return;
@@ -305,7 +310,7 @@
       $('ms-fwd').textContent = fwdText(ema.f); $('ms-side').textContent = sideText(ema.s);
       if (now - lastDraw > 180) {
         lastDraw = now;
-        $('ms-illust').innerHTML = plateSVG({ id: 'ms', fwd: clamp(ema.f, -8, 8), side: clamp(ema.s, -8, 8), phone: true, pulse: true, fixed: true });
+        setIllust('ms-illust', plateSVG({ id: 'ms', fwd: clamp(ema.f, -8, 8), side: clamp(ema.s, -8, 8), phone: true, pulse: true, fixed: true }));
       }
 
       var flat = cur.faceUp && Math.abs(f) < MAX_TILT && Math.abs(s) < MAX_TILT;
@@ -376,7 +381,7 @@
     var tot = totalSlope(state.slope);
     $('rs-eyebrow').textContent = source === 'sensor' ? '測定完了！' : '手動入力';
     $('rs-title').innerHTML = source === 'sensor' ? '傾斜の測定が<br>完了しました！' : '傾斜を<br>設定しました';
-    $('rs-illust').innerHTML = plateSVG({ id: 'rs', fwd: fwd, side: side, arrow: true });
+    setIllust('rs-illust', plateSVG({ id: 'rs', fwd: fwd, side: side, arrow: true }));
     $('rs-illust').setAttribute('aria-label', 'グリーンの傾き：前後は' + fwdText(fwd) + '、左右は' + sideText(side));
     $('rs-fwd').innerHTML = fwdText(fwd) + (Math.abs(fwd) >= FLAT ? '<small>勾配 ' + pct(fwd) + '</small>' : '');
     $('rs-side').innerHTML = sideText(side) + (Math.abs(side) >= FLAT ? '<small>勾配 ' + pct(side) + '</small>' : '');
@@ -397,7 +402,7 @@
   function renderManual() {
     var f = +$('mi-fwd').value, s = +$('mi-side').value;
     $('mi-fwd-out').textContent = fwdText(f); $('mi-side-out').textContent = sideText(s);
-    $('mi-illust').innerHTML = plateSVG({ id: 'mi', fwd: f, side: s, arrow: true });
+    setIllust('mi-illust', plateSVG({ id: 'mi', fwd: f, side: s, arrow: true }));
   }
 
   /* =====================================================================
@@ -800,7 +805,7 @@
      起動
      ===================================================================== */
   function renderOrient() {
-    $('start-illust').innerHTML = plateSVG({ id: 'st', phone: true, labels: true });
+    setIllust('start-illust', plateSVG({ id: 'st', phone: true, labels: true }));
     $('start-steps').innerHTML = orient().steps.map(function (t, i) { return '<li><span class="n">' + (i + 1) + '</span>' + t + '</li>'; }).join('');
     Array.prototype.forEach.call($('orient-chips').children, function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === state.orient)); });
   }
@@ -809,7 +814,25 @@
     state.orient = v; store.set('orient', v); renderOrient();
   }
 
+  /* 横画面では測定画面のボタンを右の列に置く（同じ要素を移動するだけ） */
+  var landscapeMQ = window.matchMedia('(orientation: landscape) and (min-width: 560px)');
+  function placeMeasureButtons() {
+    var target = landscapeMQ.matches ? $('ms-cta-l') : $('scr-measure').querySelector('.col.a .cta');
+    ['ms-next', 'ms-manual', 'ms-cancel'].forEach(function (id) { if ($(id).parentNode !== target) target.appendChild($(id)); });
+  }
+
+  /* 縦持ちのときの案内 */
+  function updateRotate() {
+    var portrait = !landscapeMQ.matches && window.innerHeight > window.innerWidth;
+    $('rotate').hidden = !(portrait && !store.get('portraitOK', false));
+    placeMeasureButtons();
+  }
+
   function init() {
+    $('rt-skip').addEventListener('click', function () { store.set('portraitOK', true); updateRotate(); });
+    if (landscapeMQ.addEventListener) landscapeMQ.addEventListener('change', updateRotate); else landscapeMQ.addListener(updateRotate);
+    window.addEventListener('resize', updateRotate);
+    updateRotate();
     $('orient-chips').innerHTML = Object.keys(ORIENTS).map(function (k) { return '<button class="chip" type="button" data-v="' + k + '" aria-pressed="false">' + ORIENTS[k].name.replace('・', '<small>') + '</small></button>'; }).join('');
     $('orient-chips').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) setOrient(b.dataset.v); });
     renderOrient();
